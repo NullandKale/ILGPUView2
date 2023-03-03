@@ -2,8 +2,10 @@
 
 ILGPU is a WPF library and a project template for creating and exerimenting with GPGPU programming in C# with ILGPU
 
-![DebugRT Example Screenshot](assets\DebugRT.png)
-![Screenshot including MainWindow](assets\MainWindow.png)
+<p float="left">
+<img src="./assets/DebugRT.png" height="200" alt="DebugRT Example Screenshot" display="inline"/>
+<img src="./assets/MainWindow.png" height="200" alt="Screenshot including MainWindow"  display="inline"/>
+</p>
 
 Above are some screenshots of the DebugRT example. A single file sphere ray tracer written with the assistance of ChatGPT
 
