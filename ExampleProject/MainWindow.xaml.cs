@@ -22,17 +22,6 @@ namespace ExampleProject
 
             instance = this;
 
-            //try
-            //{
-            //    bridge = new Bridge();
-            //    bridge.Connect();
-            //}
-            //catch (Exception e)
-            //{
-            //    Trace.WriteLine(e.ToString());
-            //    return;
-            //}
-
             renderManager = new RenderManager();
             UIBuilder.SetFPSCallback((string fps) => { label.Content= fps; });
             UIBuilder.SetUIStack(rendermode_ui);

@@ -19,11 +19,6 @@ namespace Modes
         public Sphere[] host_spheres;
         public MemoryBuffer1D<Sphere, Stride1D.Dense> device_spheres;
 
-        public float focus = 0;
-        public int views = 0;
-        public float vFOV = 45;
-        public float viewDisparity = 0;
-
         public DebugRT()
         {
         }
@@ -35,9 +30,7 @@ namespace Modes
                 gpu.ExecuteSphereFilter(gpu.framebuffer, device_spheres,
                     new DebugRTFilter(gpu.ticks,
                     new Camera3D(new Vec3(0, 0, -10), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 
-                    gpu.framebuffer.width, gpu.framebuffer.height, 40f, new Vec3(1, 0, 1)),
-                    gpu.framebuffer.width / (float)gpu.framebuffer.height,
-                    focus, views, vFOV, viewDisparity));
+                    gpu.framebuffer.width, gpu.framebuffer.height, 40f, new Vec3(1, 0, 1))));
                 gpu.ExecuteMask(gpu.framebuffer, gpu.framebuffer, new TAA(0.5f));
             }
         }
@@ -49,26 +42,6 @@ namespace Modes
                 (float)rng.NextDouble() * scale,
                 (float)rng.NextDouble() * scale
             );
-        }
-
-        public void FocusUpdate(float val)
-        {
-            focus = val;
-        }
-
-        public void ViewsUpdate(float val)
-        {
-            views = (int)val;
-        }
-
-        public void vFOVUpdate(float val)
-        {
-            vFOV = val;
-        }
-
-        public void ViewDisparityUpdate(float val)
-        {
-            viewDisparity = val;
         }
 
         public void GenerateSpheresGPT0(int count)
@@ -147,27 +120,11 @@ namespace Modes
             UIBuilder.Clear();
 
             UIBuilder.AddLabel("Debug RT");
-
-            var v_L = UIBuilder.AddLabel("");
-            UIBuilder.AddSlider(v_L, "Views min: 1 max: 255 current: ", 1, 255, 255, ViewsUpdate);
-
-            var f_L = UIBuilder.AddLabel("");
-            UIBuilder.AddSlider(f_L, "Focus min: -2 max: 2 current: ", -2, 2, -0.34f, FocusUpdate);
-
-            var vFOV_L = UIBuilder.AddLabel("");
-            UIBuilder.AddSlider(vFOV_L, "vFOV min: 15 max: 110 current: ", 15, 110, 40, vFOVUpdate);
-
-            var disp_L = UIBuilder.AddLabel("");
-            UIBuilder.AddSlider(disp_L, "Camera Travel min: 0 max: 1 current: ", 0, 1, 0.34f, ViewDisparityUpdate);
         }
     }
 
     public struct DebugRTFilter : ISphereImageFilter
     {
-        private readonly int views = 255;
-        private readonly float vFOV = 45;
-        private readonly float viewDisparity = 0;
-
         private readonly float scale = 100;
         private readonly int ticksPerDay = 500;
 
@@ -176,19 +133,9 @@ namespace Modes
         private readonly Camera3D camera;
         private readonly Light sun;
 
-        //4k
-        //focus -0.656156242
-        //val 90
-
-        //portrait
-        //focus -1.436937
-        //val 85
-        public DebugRTFilter(int tick, Camera3D camera, float contentAspect, float focus, int views, float vFOV, float viewDisparity)
+        public DebugRTFilter(int tick, Camera3D camera)
         {
             this.tick = tick;
-            this.views = views;
-            this.vFOV = vFOV;
-            this.viewDisparity = viewDisparity;
 
             this.camera = camera;
 
