@@ -88,6 +88,23 @@ public struct DebugFilter : IImageFilter
 }
 ```
 
+# List of Example modes:
+
+<p float="left">
+<img src="./assets/modes/Debug.png" height="200" alt="Debug Example Screenshot" display="inline"/>
+</p>
+Debug | Renders the debug example above
+
+<p float="left">
+<img src="./assets/modes/GOL.png" height="200" alt="Game of Life Example Screenshot" display="inline"/>
+</p>
+GOL | Renders a random Game of Life state and updates every frame
+
+<p float="left">
+<img src="./assets/modes/DebugRT.png" height="200" alt="DebugRT Example Screenshot" display="inline"/>
+</p>
+DebugRT | Ray tracing demo with reflections and TAA
+
 # How to Contribute
 
 Got an idea for improving ILGPU View 2.0? Great! Here are a few ways to get involved:
