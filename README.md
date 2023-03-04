@@ -105,6 +105,11 @@ GOL | Renders a random Game of Life state and updates every frame
 </p>
 DebugRT | Ray tracing demo with reflections and TAA
 
+<p float="left">
+<img src="./assets/modes/Fractal.png" height="200" alt="Mandelbrot Zoom Example Screenshot" display="inline"/>
+</p>
+Fractal | Mandelbrot Zoom
+
 # How to Contribute
 
 Got an idea for improving ILGPU View 2.0? Great! Here are a few ways to get involved:

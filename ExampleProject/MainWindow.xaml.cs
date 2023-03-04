@@ -34,9 +34,10 @@ namespace ExampleProject
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
             renderManager.AddRenderCallback(1, new GOL());
-            renderManager.AddRenderCallback(2, new DebugRT());
+            renderManager.AddRenderCallback(2, new Fractal());
+            renderManager.AddRenderCallback(3, new DebugRT());
 
-            mode.ItemsSource = new string[] { "Debug", "Game of Life", "DebugRT" };
+            mode.ItemsSource = new string[] { "Debug", "Game of Life", "Fractal", "DebugRT" };
 
             mode.SelectionChanged += (sender, args) =>
             {

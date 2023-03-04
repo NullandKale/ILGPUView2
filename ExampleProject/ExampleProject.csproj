@@ -11,4 +11,20 @@
     <ProjectReference Include="..\ILGPUView2\ILGPUView2.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TestImages\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TestImages\Debug.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="TestImages\DebugRT.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="TestImages\GOL.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
