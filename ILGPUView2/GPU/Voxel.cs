@@ -63,7 +63,7 @@ namespace GPU
             Vec3 center = new Vec3(v, 0, 350);
             Vec3 lookAt = new Vec3(v, 0, 0);
 
-            Camera3D camera = new Camera3D(center, lookAt, new Vec3(0, -1, 0), output.width, output.height, 40f, new Vec3(1, 0, 1));
+            Camera3D camera = new Camera3D(center, lookAt, new Vec3(0, -1, 0), output.width, output.height, 40f);
             var hit0 = voxels.hit(camera.GetRay(x + (stepX * 0.5f), y + (stepY * 0.5f)), 0, 5000, 2);
             var hit1 = voxels.hit(camera.GetRay(x, y), 0, 5000, 2);
 

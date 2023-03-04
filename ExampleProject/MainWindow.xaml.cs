@@ -30,14 +30,15 @@ namespace ExampleProject
             AddRenderModes();
         }
 
-        public void AddRenderModes(int default_mode = 2)
+        public void AddRenderModes(int default_mode = 3)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
             renderManager.AddRenderCallback(1, new GOL());
             renderManager.AddRenderCallback(2, new Fractal());
-            renderManager.AddRenderCallback(3, new DebugRT());
+            renderManager.AddRenderCallback(3, new Particles());
+            renderManager.AddRenderCallback(4, new DebugRT());
 
-            mode.ItemsSource = new string[] { "Debug", "Game of Life", "Fractal", "DebugRT" };
+            mode.ItemsSource = new string[] { "Debug", "Game of Life", "Fractal", "Particle Sim", "DebugRT" };
 
             mode.SelectionChanged += (sender, args) =>
             {

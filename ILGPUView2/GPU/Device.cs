@@ -4,6 +4,7 @@ using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
+using ILGPUView2.GPU;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -167,6 +168,18 @@ namespace GPU
             kernel(output.width * output.height, ticks, output.toDevice(this), filter);
         }
 
+        public void ExecuteParticleSystemFilter<TFunc>(GPUImage output, HostParticleSystem particleSystem, TFunc filter = default) where TFunc : unmanaged, IParticleSystemFilter
+        {
+            var kernel = GetParticleFilterKernel(filter);
+            kernel(output.width * output.height, ticks, particleSystem.toGPU(), output.toDevice(this), filter);
+        }
+
+        public void ExecuteParticleSystemUpdate<TFunc>(HostParticleSystem particleSystem, TFunc filter = default) where TFunc : unmanaged, IParticleSystemUpdate
+        {
+            var kernel = GetParticleUpdateKernel(filter);
+            kernel(particleSystem.count, ticks, particleSystem.toGPU(), filter);
+        }
+
         public void ExecuteSphereFilter<TFunc>(GPUImage output, ArrayView1D<Sphere, Stride1D.Dense> spheres, TFunc filter = default) where TFunc : unmanaged, ISphereImageFilter
         {
             var kernel = GetSphereFilterKernel(filter);
@@ -212,6 +225,28 @@ namespace GPU
             }
 
             return (Action<Index1D, int, dImage, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, int, dParticleSystem, dImage, TFunc> GetParticleFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IParticleSystemFilter
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dParticleSystem, dImage, TFunc>(Kernels.ParticleSystemFilterKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dParticleSystem, dImage, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, int, dParticleSystem, TFunc> GetParticleUpdateKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IParticleSystemUpdate
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dParticleSystem, TFunc>(Kernels.ParticleSystemUpdateKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dParticleSystem, TFunc>)kernels[filter.GetType()];
         }
 
         private Action<Index1D, int, dImage, ArrayView1D<Sphere, Stride1D.Dense>, TFunc> GetSphereFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ISphereImageFilter

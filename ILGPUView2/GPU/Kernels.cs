@@ -2,6 +2,7 @@
 using ILGPU;
 using GPU.RT;
 using Camera;
+using ILGPUView2.GPU;
 
 namespace GPU
 {
@@ -40,6 +41,33 @@ namespace GPU
         public interface IVoxelFilter
         {
             RGBA32 Apply(int tick, float x, float y, dVoxels voxels, dImage output);
+        }
+
+        public interface IParticleSystemFilter
+        {
+            RGBA32 Apply(int tick, float x, float y, dParticleSystem particles, dImage output);
+        }
+
+        public interface IParticleSystemUpdate
+        {
+            void Update(int tick, int id, dParticleSystem particles);
+        }
+
+
+        public static void ParticleSystemFilterKernel<TFunc>(Index1D index, int tick, dParticleSystem particles, dImage output, TFunc filter) where TFunc : unmanaged, IParticleSystemFilter
+        {
+            int x = index.X % output.width;
+            int y = index.X / output.width;
+
+            double u = (double)x / (double)output.width;
+            double v = (double)y / (double)output.height;
+
+            output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, particles, output));
+        }
+
+        public static void ParticleSystemUpdateKernel<TFunc>(Index1D index, int tick, dParticleSystem particles, TFunc filter) where TFunc : unmanaged, IParticleSystemUpdate
+        {
+            filter.Update(tick, index.X, particles);
         }
 
         public static void ImageFilterKernel<TFunc>(Index1D index, int tick, dImage output, TFunc filter) where TFunc : unmanaged, IImageFilter

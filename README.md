@@ -95,20 +95,35 @@ public struct DebugFilter : IImageFilter
 </p>
 Debug | Renders the debug example above
 
+-------------------------------------------------------
+
 <p float="left">
 <img src="./assets/modes/GOL.png" height="200" alt="Game of Life Example Screenshot" display="inline"/>
 </p>
 GOL | Renders a random Game of Life state and updates every frame
+
+-------------------------------------------------------
 
 <p float="left">
 <img src="./assets/modes/DebugRT.png" height="200" alt="DebugRT Example Screenshot" display="inline"/>
 </p>
 DebugRT | Ray tracing demo with reflections and TAA
 
+-------------------------------------------------------
+
 <p float="left">
 <img src="./assets/modes/Fractal.png" height="200" alt="Mandelbrot Zoom Example Screenshot" display="inline"/>
 </p>
 Fractal | Mandelbrot Zoom
+
+-------------------------------------------------------
+
+<p float="left">
+<img src="./assets/modes/Particles.png" height="200" alt="Mandelbrot Zoom Example Screenshot" display="inline"/>
+</p>
+Particle Sim | Simple Particle Simulation
+
+-------------------------------------------------------
 
 # How to Contribute
 

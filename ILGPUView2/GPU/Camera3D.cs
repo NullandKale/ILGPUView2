@@ -1,7 +1,9 @@
 ﻿using GPU.RT;
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
+using System;
 using System.Numerics;
+using System.Windows.Media.Media3D;
 
 namespace GPU
 {
@@ -9,7 +11,6 @@ namespace GPU
     {
         public SpecializedValue<int> height { get; set; }
         public SpecializedValue<int> width { get; set; }
-        public Vec3 noHitColor { get; set; }
 
         public float verticalFov { get; set; }
 
@@ -22,18 +23,12 @@ namespace GPU
         public float cameraPlaneDist { get; set; }
         public float reciprocalHeight { get; set; }
         public float reciprocalWidth { get; set; }
-
-        public bool isBGR { get; set; }
-        public float depthCutOff { get; set; }
+        public float tanHalfFov;
 
         public Camera3D(Camera3D camera, Vec3 movement, Vec3 turn)
         {
             this.width = camera.width;
             this.height = camera.height;
-            this.isBGR = camera.isBGR;
-            this.depthCutOff = camera.depthCutOff;
-
-            this.noHitColor = camera.noHitColor;
 
             Vector4 temp = camera.lookAt - camera.origin;
 
@@ -59,15 +54,13 @@ namespace GPU
             this.verticalFov = camera.verticalFov;
             reciprocalHeight = 1.0f / height;
             reciprocalWidth = 1.0f / width;
+            tanHalfFov = XMath.Tan(verticalFov / 2f);
         }
 
         public Camera3D(Camera3D camera, float vfov)
         {
             this.width = camera.width;
             this.height = camera.height;
-            this.noHitColor = camera.noHitColor;
-            this.isBGR = camera.isBGR;
-            this.depthCutOff = camera.depthCutOff;
 
             this.verticalFov = vfov;
 
@@ -81,15 +74,13 @@ namespace GPU
             cameraPlaneDist = 1.0f / XMath.Tan(verticalFov * XMath.PI / 360.0f);
             reciprocalHeight = 1.0f / height;
             reciprocalWidth = 1.0f / width;
+            tanHalfFov = XMath.Tan(verticalFov / 2f);
         }
 
         public Camera3D(Camera3D camera, int width, int height)
         {
             this.width = new SpecializedValue<int>(width);
             this.height = new SpecializedValue<int>(height);
-            this.noHitColor = camera.noHitColor;
-            this.isBGR = camera.isBGR;
-            this.depthCutOff = camera.depthCutOff;
 
             this.verticalFov = camera.verticalFov;
 
@@ -103,15 +94,13 @@ namespace GPU
             cameraPlaneDist = 1.0f / XMath.Tan(verticalFov * XMath.PI / 360.0f);
             reciprocalHeight = 1.0f / height;
             reciprocalWidth = 1.0f / width;
+            tanHalfFov = XMath.Tan(verticalFov / 2f);
         }
 
-        public Camera3D(Vec3 origin, Vec3 lookAt, Vec3 up, int width, int height, float verticalFov, Vec3 noHitColor, bool isBGR = false)
+        public Camera3D(Vec3 origin, Vec3 lookAt, Vec3 up, int width, int height, float verticalFov)
         {
             this.width = new SpecializedValue<int>(width);
             this.height = new SpecializedValue<int>(height);
-            this.noHitColor = noHitColor;
-            this.isBGR = isBGR;
-            this.depthCutOff = 1;
 
             this.verticalFov = verticalFov;
             this.origin = origin;
@@ -124,6 +113,7 @@ namespace GPU
             cameraPlaneDist = 1.0f / XMath.Tan(verticalFov * XMath.PI / 360.0f);
             reciprocalHeight = 1.0f / height;
             reciprocalWidth = 1.0f / width;
+            tanHalfFov = XMath.Tan(verticalFov / 2f);
         }
 
 
@@ -146,6 +136,33 @@ namespace GPU
         {
             return rayFromUnit((2f * x) - 1f, (2f * y) - 1f);
         }
+
+        public Vec2 WorldToScreenPoint(Vec3 point)
+        {
+            Vec3 delta = point - origin;
+            float z = Vec3.dot(axis.z, delta);
+
+            if (z < 0)
+            {
+                // The point is behind the camera, so we can't project it
+                return new Vec2();
+            }
+
+            float x = Vec3.dot(axis.x, delta) / (z * tanHalfFov);
+            float y = Vec3.dot(axis.y, delta) / (z * tanHalfFov);
+
+            Vec2 screenPoint = new Vec2((x + 1) * (width / 2), (y + 1) * (height / 2));
+            return screenPoint;
+        }
+
+
+        public Vec2 WorldToPixel(Vec3 point)
+        {
+            Vec2 screenPoint = WorldToScreenPoint(point);
+            int pixelX = (int)screenPoint.x;
+            int pixelY = (int)screenPoint.y;
+            return new Vec2(pixelX, pixelY);
+        }
     }
 
     public struct OrthoNormalBasis
@@ -160,6 +177,7 @@ namespace GPU
             this.y = y;
             this.z = z;
         }
+
 
 
         public Vec3 transform(Vec3 pos)
