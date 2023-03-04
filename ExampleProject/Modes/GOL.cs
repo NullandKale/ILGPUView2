@@ -11,7 +11,6 @@ namespace ExampleProject.Modes
 {
     public class GOL : IRenderCallback
     {
-        Device gpu;
         GPUImage[] framebuffers;
 
         public void CreateUI()
@@ -22,8 +21,7 @@ namespace ExampleProject.Modes
 
         public void OnRender(Device gpu)
         {
-            this.gpu = gpu;
-            ResizeFramebuffers();
+            ResizeFramebuffers(gpu);
 
             gpu.ExecuteMask<LifeMask>(framebuffers[1], framebuffers[0]);
             gpu.ExecuteMask<Scale>(gpu.framebuffer, framebuffers[1]);
@@ -49,7 +47,7 @@ namespace ExampleProject.Modes
 
         }
 
-        public void ResizeFramebuffers()
+        public void ResizeFramebuffers(Device gpu)
         {
             bool initialized = true;
 

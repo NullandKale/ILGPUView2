@@ -25,5 +25,4 @@ namespace GPU
             return new RGBA32(blendedColor);
         }
     }
-
 }

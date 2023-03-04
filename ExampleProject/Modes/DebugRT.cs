@@ -1,4 +1,6 @@
-﻿using GPU;
+﻿using Camera;
+using ExampleProject.Modes;
+using GPU;
 using GPU.RT;
 using ILGPU;
 using ILGPU.Algorithms;
@@ -19,6 +21,8 @@ namespace Modes
         public Sphere[] host_spheres;
         public MemoryBuffer1D<Sphere, Stride1D.Dense> device_spheres;
 
+        GPUImage[] framebuffers;
+
         public DebugRT()
         {
         }
@@ -27,11 +31,42 @@ namespace Modes
         {
             if (gpu.framebuffer != null)
             {
-                gpu.ExecuteSphereFilter(gpu.framebuffer, device_spheres,
+                ResizeFramebuffers(gpu);
+
+                gpu.ExecuteSphereFilter(framebuffers[0], device_spheres,
                     new DebugRTFilter(gpu.ticks,
                     new Camera3D(new Vec3(0, 0, -10), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 
                     gpu.framebuffer.width, gpu.framebuffer.height, 40f, new Vec3(1, 0, 1))));
-                //gpu.ExecuteMask(gpu.framebuffer, gpu.framebuffer, new TAA(0.5f));
+                gpu.ExecuteMask(gpu.framebuffer, framebuffers[0], new TAA(0.2f));
+            }
+        }
+
+        private void ResizeFramebuffers(GPU.Device gpu)
+        {
+            bool initialized = true;
+
+            if (framebuffers == null)
+            {
+                framebuffers = new GPUImage[1];
+            }
+
+            for (int i = 0; i < framebuffers.Length; i++)
+            {
+                if (framebuffers[i] == null || framebuffers[i].width != gpu.framebuffer.width || framebuffers[i].height != gpu.framebuffer.height)
+                {
+                    if (framebuffers[i] != null)
+                    {
+                        framebuffers[i].Dispose();
+                    }
+
+                    framebuffers[i] = new GPUImage(gpu.renderFrame.width, gpu.renderFrame.height);
+                    initialized = false;
+                }
+            }
+
+            if (!initialized)
+            {
+                gpu.ExecuteFilter<LifeStartFilter>(framebuffers[0]);
             }
         }
 
@@ -176,12 +211,11 @@ namespace Modes
             }
         }
 
-        Vec3 TraceBounce(ArrayView1D<Sphere, Stride1D.Dense> data, Vec3 hitNormal, Light sun, Sphere hitSphere, (Vec3 hitPoint, float t, Vec3 color, int index) hit)
+        Vec3 TraceBounce(Vec2 uv, uint counter, ArrayView1D<Sphere, Stride1D.Dense> data, Vec3 hitNormal, Light sun, Sphere hitSphere, (Vec3 hitPoint, float t, Vec3 color, int index) hit)
         {
-            uint counter = 0;
-            uint seed = Utils.CreateSeed((uint)tick, counter++, hit.hitPoint.x, hit.hitPoint.y);
+            uint seed = Utils.CreateSeed((uint)tick, counter++, uv.x, uv.y);
             float rand1 = Utils.GetRandom(seed, -1f, 1f);
-            seed = Utils.CreateSeed((uint)tick, counter++, hit.hitPoint.x, hit.hitPoint.y);
+            seed = Utils.CreateSeed((uint)tick, counter++, uv.x, uv.y);
             float rand2 = Utils.GetRandom(seed, -1f, 1f);
 
             Vec3 bounceDir = Vec3.unitVector(hitNormal + new Vec3(rand1, rand2, 0f) * (1f - hitSphere.reflectivity));
@@ -247,7 +281,7 @@ namespace Modes
             Vec3 hitNormal = Vec3.unitVector(hit.hitPoint - hitSphere.center);
             Vec3 diffuseColor = hit.color;
 
-            Vec3 bounceColor = TraceBounce(data, hitNormal, sun, hitSphere, hit);
+            Vec3 bounceColor = TraceBounce(uv, 0, data, hitNormal, sun, hitSphere, hit);
             Vec3 shadowColor = TraceShadows(data, hitNormal, sun, hit);
 
             return (diffuseColor * shadowColor + bounceColor);
