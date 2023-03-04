@@ -1,4 +1,5 @@
-﻿using GPU;
+﻿using ExampleProject.Modes;
+using GPU;
 using Modes;
 using System;
 using System.Windows;
@@ -31,9 +32,10 @@ namespace ExampleProject
         public void AddRenderModes(int default_mode = 0)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
-            renderManager.AddRenderCallback(1, new DebugRT());
+            renderManager.AddRenderCallback(1, new GOL());
+            renderManager.AddRenderCallback(2, new DebugRT());
 
-            mode.ItemsSource = new string[] { "Debug", "DebugRT" };
+            mode.ItemsSource = new string[] { "Debug", "Game of Life", "DebugRT" };
 
             mode.SelectionChanged += (sender, args) =>
             {

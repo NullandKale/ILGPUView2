@@ -31,11 +31,6 @@ namespace ExampleProject.Modes
         {
 
         }
-
-        public void SetOption(int option)
-        {
-
-        }
     }
 
     public struct DebugFilter : IImageFilter

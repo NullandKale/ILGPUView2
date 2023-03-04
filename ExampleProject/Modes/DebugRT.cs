@@ -31,7 +31,7 @@ namespace Modes
                     new DebugRTFilter(gpu.ticks,
                     new Camera3D(new Vec3(0, 0, -10), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 
                     gpu.framebuffer.width, gpu.framebuffer.height, 40f, new Vec3(1, 0, 1))));
-                gpu.ExecuteMask(gpu.framebuffer, gpu.framebuffer, new TAA(0.5f));
+                //gpu.ExecuteMask(gpu.framebuffer, gpu.framebuffer, new TAA(0.5f));
             }
         }
 

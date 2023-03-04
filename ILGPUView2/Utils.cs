@@ -299,45 +299,38 @@ namespace GPU
             const int c = 1013904223;
             const int m = int.MaxValue;
 
-            float x = (float)((a * seed + c) % m);
-
-            // Scale the random number to the desired range
+            // Compute the scaled random number
+            float x = seed;
+            x = (a * x + c) % m;
             float range = max - min + 1;
-            if (range <= 0)
-            {
-                range = 2;
-            }
-
-            int scaled = (int)(x / m * range);
-
-            int toReturn = min + scaled;
-
-            if(toReturn < 0)
-            {
-                return 0;
-            }
+            int scaled = (int)(x % range);
 
             // Add the minimum value to the scaled random number
+            int toReturn = min + scaled;
             return toReturn;
-        }
-
-        public static uint CreateSeed(uint tick, float x, float y)
-        {
-            uint combinedValue = 0;
-            combinedValue |= (uint)((x + (65535 / 2f)) * 65535) << 16;  // set upper 16 bits to x
-            combinedValue |= (uint)((y + (65535 / 2f)) * 65535);        // set lower 16 bits to y
-            combinedValue ^= tick & 0xFFFF;           // set bottom 16 bits to bottom 16 bits of tick
-            return combinedValue;
         }
 
         public static uint CreateSeed(uint tick, uint counter, float x, float y)
         {
-            uint combinedValue = 0;
-            combinedValue |= (uint)((x + (65535 / 2f)) * 65535) << 16;  // set upper 16 bits to x
-            combinedValue |= (uint)((y + (65535 / 2f)) * 65535);        // set lower 16 bits to y
-            combinedValue ^= (counter & 0xFFFF);        // set bottom 16 bits to bottom 16 bits of counter
-            combinedValue ^= (tick & 0xFFFF) << 16;   // set upper 16 bits to bottom 16 bits of tick
-            return combinedValue;
+            const uint FNV_PRIME = 16777619;
+            const uint FNV_OFFSET_BASIS = 2166136261;
+
+            // Convert x and y to integer values in the range [0, 2^32-1]
+            uint ix = (uint)(x * 4294967295);
+            uint iy = (uint)(y * 4294967295);
+
+            // Compute FNV-1a hash of the input values
+            uint hash = FNV_OFFSET_BASIS;
+            hash ^= tick;
+            hash *= FNV_PRIME;
+            hash ^= counter;
+            hash *= FNV_PRIME;
+            hash ^= ix;
+            hash *= FNV_PRIME;
+            hash ^= iy;
+            hash *= FNV_PRIME;
+
+            return hash;
         }
 
         public static List<string> getSegments(string input, int segmentLength)
