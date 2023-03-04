@@ -1,6 +1,6 @@
 # ILGPUView2
 
-ILGPU is a WPF library and a project template for creating and exerimenting with GPGPU programming in C# with ILGPU
+ILGPU is a WPF library and a project template for creating and experimenting with GPGPU programming in C# with ILGPU
 
 <p float="left">
 <img src="./assets/DebugRT.png" height="200" alt="DebugRT Example Screenshot" display="inline"/>
