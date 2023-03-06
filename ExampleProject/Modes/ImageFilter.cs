@@ -57,6 +57,7 @@ namespace ExampleProject.Modes
                 "GaussianBlur",
                 "BoxBlur",
                 "LaplacianOfGaussianBlur",
+                "LaplacianBlur",
                 "CreateSobelXKernel",
                 "CreateSobelYKernel",
                 "HighPass",
@@ -119,19 +120,20 @@ namespace ExampleProject.Modes
         GaussianBlur = 0,
         BoxBlur = 1,
         LaplacianOfGaussianBlur = 2,
-        CreateSobelXKernel = 3,
-        CreateSobelYKernel = 4,
-        HighPass = 5,
-        LowPass = 6,
-        Median = 7,
-        Emposs = 8,
-        MotionBlur = 9,
-        PrewittX = 10,
-        PrewittY = 11,
-        RobertsX = 12,
-        RobertsY = 13,
-        FreiChenX = 14,
-        FreiChenY = 15,
+        LaplacianBlur = 3,
+        CreateSobelXKernel = 4,
+        CreateSobelYKernel = 5,
+        HighPass = 6,
+        LowPass = 7,
+        Median = 8,
+        Emposs = 9,
+        MotionBlur = 10,
+        PrewittX = 11,
+        PrewittY = 12,
+        RobertsX = 13,
+        RobertsY = 14,
+        FreiChenX = 15,
+        FreiChenY = 16,
     }
 
     // this is CRAZY slow, because it 
@@ -167,6 +169,10 @@ namespace ExampleProject.Modes
                 case FilterType.LaplacianOfGaussianBlur:
                     this.kernelSize = kernelSize;
                     data = CreateLaplacianOfGaussianKernel(sigma, kernelSize);
+                    break;
+                case FilterType.LaplacianBlur:
+                    this.kernelSize = 3;
+                    data = CreateLaplacianKernel();
                     break;
                 case FilterType.CreateSobelXKernel:
                     this.kernelSize = 3;
@@ -277,7 +283,7 @@ namespace ExampleProject.Modes
 
         public static float[] CreateLaplacianOfGaussianKernel(float sigma, int size)
         {
-            float[] kernel = new float[size * size];
+            float[] kernel = new float[maxKernelSize * maxKernelSize];
 
             int halfSize = size / 2;
             for (int y = -halfSize; y <= halfSize; y++)
@@ -291,6 +297,12 @@ namespace ExampleProject.Modes
 
             return kernel;
         }
+
+        public static float[] CreateLaplacianKernel()
+        {
+            return new float[] { 0, 1, 0, 1, -4, 1, 0, 1, 0 };
+        }
+
 
         public static float[] CreateSobelXKernel()
         {
