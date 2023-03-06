@@ -23,10 +23,6 @@ namespace Modes
 
         GPUImage[] framebuffers;
 
-        public DebugRT()
-        {
-        }
-
         public void OnRender(GPU.Device gpu)
         {
             if (gpu.framebuffer != null)
