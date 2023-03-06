@@ -1,6 +1,7 @@
-﻿using static GPU.Kernels;
+﻿using GPU;
+using static GPU.Kernels;
 
-namespace GPU
+namespace ILGPUView2.GPU.Filters
 {
     public struct Scale : IImageMask
     {

@@ -5,6 +5,7 @@ using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPUView2.GPU;
+using ILGPUView2.GPU.RT;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

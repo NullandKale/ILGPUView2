@@ -1,11 +1,12 @@
-﻿using GPU.RT;
+﻿using GPU;
+using GPU.RT;
 using ILGPU;
 using ILGPU.Runtime;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 
-namespace GPU
+namespace ILGPUView2.GPU.RT
 {
     public class HOST_BVH
     {
@@ -17,17 +18,17 @@ namespace GPU
 
         public DEVICE_BVH ToDevice(Accelerator device)
         {
-            if(bvh_nodes == null)
+            if (bvh_nodes == null)
             {
                 return new DEVICE_BVH();
             }
 
-            if(device_nodes != null)
+            if (device_nodes != null)
             {
                 device_nodes.Dispose();
             }
 
-            if(device_spheres != null)
+            if (device_spheres != null)
             {
                 device_spheres.Dispose();
             }
@@ -46,7 +47,7 @@ namespace GPU
             // Recursively build the BVH
             spheres = objects;
 
-            for(int i = 0; i < spheres.Count; i++)
+            for (int i = 0; i < spheres.Count; i++)
             {
                 Sphere s = objects[i];
                 s.id = i;
@@ -64,7 +65,7 @@ namespace GPU
             if (objects.Count <= node.child_count)
             {
                 // Create a new internal node
-                node internal_node = new node { self_isLeaf = 1, aabb = bounding_box, childrenCount = objects.Count};
+                node internal_node = new node { self_isLeaf = 1, aabb = bounding_box, childrenCount = objects.Count };
 
                 // Add child nodes for each object in the set
                 for (int i = 0; i < objects.Count; i++)
@@ -200,14 +201,14 @@ namespace GPU
 
         public DEVICE_BVH(MemoryBuffer1D<node, Stride1D.Dense> nodes, MemoryBuffer1D<Sphere, Stride1D.Dense> objects)
         {
-            this.root = nodes.Length - 1;
+            root = nodes.Length - 1;
             this.nodes = nodes;
             this.objects = objects;
         }
 
         public node GetNode(int id)
         {
-            if(id >= 0 && id < nodes.Length)
+            if (id >= 0 && id < nodes.Length)
             {
                 return nodes[id];
             }
@@ -247,10 +248,10 @@ namespace GPU
                 // If the current node is a leaf, test the contained sphere(s) for intersection
                 if (current_node.isLeaf())
                 {
-                    for(int i = 0; i < current_node.childrenCount; i++)
+                    for (int i = 0; i < current_node.childrenCount; i++)
                     {
                         int obj_id = current_node.GetChild(i);
-                        if(obj_id != -1)
+                        if (obj_id != -1)
                         {
                             Sphere obj_sphere = GetSphere(obj_id);
                             float sphere_t = obj_sphere.intersect(ray);
@@ -269,12 +270,12 @@ namespace GPU
                     int left_child_id = current_node.GetChildNode(0);
                     int right_child_id = current_node.GetChildNode(1);
 
-                    if(left_child_id != -1)
+                    if (left_child_id != -1)
                     {
                         stack.Push(left_child_id);
                     }
 
-                    if(right_child_id != -1)
+                    if (right_child_id != -1)
                     {
                         stack.Push(right_child_id);
                     }
@@ -341,7 +342,7 @@ namespace GPU
 
         public node()
         {
-            for(int i = 0; i < child_count; i++)
+            for (int i = 0; i < child_count; i++)
             {
                 children[i] = -1;
             }
@@ -349,7 +350,7 @@ namespace GPU
 
         public int GetChild(int index)
         {
-            if(isLeaf())
+            if (isLeaf())
             {
                 return children[index];
             }
@@ -391,7 +392,7 @@ namespace GPU
 
         public bool isLeaf()
         {
-            return self_isLeaf == 1; 
+            return self_isLeaf == 1;
         }
 
         public float intersect(Ray ray)

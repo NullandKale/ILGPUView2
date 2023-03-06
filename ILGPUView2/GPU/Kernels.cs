@@ -3,6 +3,7 @@ using ILGPU;
 using GPU.RT;
 using Camera;
 using ILGPUView2.GPU;
+using ILGPUView2.GPU.RT;
 
 namespace GPU
 {
