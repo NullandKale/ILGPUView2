@@ -5,6 +5,7 @@ using GPU.RT;
 using ILGPU;
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
+using ILGPUView2.GPU.Filters;
 using System;
 using UIElement;
 using static GPU.Kernels;
