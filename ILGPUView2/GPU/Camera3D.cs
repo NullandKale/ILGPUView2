@@ -9,20 +9,20 @@ namespace GPU
 {
     public struct Camera3D
     {
-        public SpecializedValue<int> height { get; set; }
-        public SpecializedValue<int> width { get; set; }
+        public SpecializedValue<int> height;
+        public SpecializedValue<int> width;
 
-        public float verticalFov { get; set; }
+        public float verticalFov;
 
-        public Vec3 origin { get; set; }
-        public Vec3 lookAt { get; set; }
-        public Vec3 up { get; set; }
-        public OrthoNormalBasis axis { get; set; }
+        public Vec3 origin;
+        public Vec3 lookAt;
+        public Vec3 up;
+        public OrthoNormalBasis axis;
 
-        public float aspectRatio { get; set; }
-        public float cameraPlaneDist { get; set; }
-        public float reciprocalHeight { get; set; }
-        public float reciprocalWidth { get; set; }
+        public float aspectRatio;
+        public float cameraPlaneDist;
+        public float reciprocalHeight;
+        public float reciprocalWidth;
         public float tanHalfFov;
 
         public Camera3D(Camera3D camera, Vec3 movement, Vec3 turn)
@@ -127,11 +127,6 @@ namespace GPU
             return new Ray(origin, direction);
         }
 
-        //public Ray GetRay(float x, float y)
-        //{
-        //    return rayFromUnit(2f * (x * reciprocalWidth) - 1f, 2f * (y * reciprocalHeight) - 1f);
-        //}
-
         public Ray GetRay(float x, float y)
         {
             return rayFromUnit((2f * x) - 1f, (2f * y) - 1f);
@@ -154,15 +149,6 @@ namespace GPU
             Vec2 screenPoint = new Vec2((x + 1) * (width / 2), (y + 1) * (height / 2));
             return screenPoint;
         }
-
-
-        public Vec2 WorldToPixel(Vec3 point)
-        {
-            Vec2 screenPoint = WorldToScreenPoint(point);
-            int pixelX = (int)screenPoint.x;
-            int pixelY = (int)screenPoint.y;
-            return new Vec2(pixelX, pixelY);
-        }
     }
 
     public struct OrthoNormalBasis
@@ -178,13 +164,10 @@ namespace GPU
             this.z = z;
         }
 
-
-
         public Vec3 transform(Vec3 pos)
         {
             return x * pos.x + y * pos.y + z * pos.z;
         }
-
 
         public static OrthoNormalBasis fromXY(Vec3 x, Vec3 y)
         {
@@ -193,14 +176,12 @@ namespace GPU
             return new OrthoNormalBasis(x, yy, zz);
         }
 
-
         public static OrthoNormalBasis fromYX(Vec3 y, Vec3 x)
         {
             Vec3 zz = Vec3.unitVector(Vec3.cross(x, y));
             Vec3 xx = Vec3.unitVector(Vec3.cross(y, zz));
             return new OrthoNormalBasis(xx, y, zz);
         }
-
 
         public static OrthoNormalBasis fromXZ(Vec3 x, Vec3 z)
         {
@@ -209,14 +190,12 @@ namespace GPU
             return new OrthoNormalBasis(x, yy, zz);
         }
 
-
         public static OrthoNormalBasis fromZX(Vec3 z, Vec3 x)
         {
             Vec3 yy = Vec3.unitVector(Vec3.cross(z, x));
             Vec3 xx = Vec3.unitVector(Vec3.cross(yy, z));
             return new OrthoNormalBasis(xx, yy, z);
         }
-
 
         public static OrthoNormalBasis fromYZ(Vec3 y, Vec3 z)
         {
@@ -225,14 +204,12 @@ namespace GPU
             return new OrthoNormalBasis(xx, y, zz);
         }
 
-
         public static OrthoNormalBasis fromZY(Vec3 z, Vec3 y)
         {
             Vec3 xx = Vec3.unitVector(Vec3.cross(y, z));
             Vec3 yy = Vec3.unitVector(Vec3.cross(z, xx));
             return new OrthoNormalBasis(xx, yy, z);
         }
-
 
         public static OrthoNormalBasis fromZ(Vec3 z)
         {

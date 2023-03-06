@@ -36,9 +36,10 @@ namespace ExampleProject
             renderManager.AddRenderCallback(1, new GOL());
             renderManager.AddRenderCallback(2, new Fractal());
             renderManager.AddRenderCallback(3, new Particles());
-            renderManager.AddRenderCallback(4, new DebugRT());
+            renderManager.AddRenderCallback(4, new ImageFilter());
+            renderManager.AddRenderCallback(5, new DebugRT());
 
-            mode.ItemsSource = new string[] { "Debug", "Game of Life", "Fractal", "Particle Sim", "DebugRT" };
+            mode.ItemsSource = new string[] { "Debug", "Game of Life", "Fractal", "Particle Sim", "Image Filter", "DebugRT" };
 
             mode.SelectionChanged += (sender, args) =>
             {

@@ -30,7 +30,7 @@ namespace ExampleProject.Modes
             UIBuilder.AddLabel("Particle Sim");
 
             var particleCountLabel = UIBuilder.AddLabel("");
-            UIBuilder.AddSlider(particleCountLabel, "Particle Count: ", 10, 10000, 5000, (newParticleCount) => { particleCount = (int)newParticleCount; });
+            UIBuilder.AddSlider(particleCountLabel, "Particle Count: ", 10, 10000, 9999, (newParticleCount) => { particleCount = (int)newParticleCount; });
 
             var particleSizeLabel = UIBuilder.AddLabel("");
             UIBuilder.AddSlider(particleSizeLabel, "Particle Size: ", 1, 25, 2, (newParticleSize) => { particleSize = (int)newParticleSize; });
@@ -91,12 +91,10 @@ namespace ExampleProject.Modes
                 // Check if particle is within particleSize distance of the pixel position
                 if (XMath.Abs(pixelPos.x - pixelX) <= particleSize && XMath.Abs(pixelPos.y - pixelY) <= particleSize)
                 {
-                    // Return the particle color if it is within range of the pixel
                     color = (color * 0.5f) + (particles.colors[i] * 0.5f);
                 }
             }
 
-            // Return a default color if no particles are within range of the pixel
             return new RGBA32(color);
         }
 

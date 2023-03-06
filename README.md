@@ -119,9 +119,16 @@ Fractal | Mandelbrot Zoom
 -------------------------------------------------------
 
 <p float="left">
-<img src="./assets/modes/Particles.png" height="200" alt="Mandelbrot Zoom Example Screenshot" display="inline"/>
+<img src="./assets/modes/Particles.png" height="200" alt="Particle System Example Screenshot" display="inline"/>
 </p>
 Particle Sim | Simple Particle Simulation
+
+-------------------------------------------------------
+
+<p float="left">
+<img src="./assets/modes/ImageFilters.png" height="200" alt="Image Filters Example Screenshot" display="inline"/>
+</p>
+Image Filters | Loads an image and applys one of 15 filters
 
 -------------------------------------------------------
 
