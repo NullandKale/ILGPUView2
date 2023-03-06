@@ -49,6 +49,11 @@ namespace GPU
             RGBA32 Apply(int tick, float x, float y, dParticleSystem particles, dImage output);
         }
 
+        public interface IParticleSystemDraw
+        {
+            void Draw(int tick, int particleID, dParticleSystem particles, dImage output);
+        }
+
         public interface IParticleSystemUpdate
         {
             void Update(int tick, int id, dParticleSystem particles);
@@ -64,6 +69,11 @@ namespace GPU
             double v = (double)y / (double)output.height;
 
             output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, particles, output));
+        }
+
+        public static void ParticleSystemDrawKernel<TFunc>(Index1D index, int tick, dParticleSystem particles, dImage output, TFunc filter) where TFunc : unmanaged, IParticleSystemDraw
+        {
+            filter.Draw(tick, index, particles, output);
         }
 
         public static void ParticleSystemUpdateKernel<TFunc>(Index1D index, int tick, dParticleSystem particles, TFunc filter) where TFunc : unmanaged, IParticleSystemUpdate

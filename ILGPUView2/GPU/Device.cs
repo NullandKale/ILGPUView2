@@ -175,6 +175,12 @@ namespace GPU
             kernel(output.width * output.height, ticks, particleSystem.toGPU(), output.toDevice(this), filter);
         }
 
+        public void DrawParticleSystem<TFunc>(GPUImage output, HostParticleSystem particleSystem, TFunc filter = default) where TFunc : unmanaged, IParticleSystemDraw
+        {
+            var kernel = GetParticleDrawKernel(filter);
+            kernel(particleSystem.count, ticks, particleSystem.toGPU(), output.toDevice(this), filter);
+        }
+
         public void ExecuteParticleSystemUpdate<TFunc>(HostParticleSystem particleSystem, TFunc filter = default) where TFunc : unmanaged, IParticleSystemUpdate
         {
             var kernel = GetParticleUpdateKernel(filter);
@@ -226,6 +232,17 @@ namespace GPU
             }
 
             return (Action<Index1D, int, dImage, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, int, dParticleSystem, dImage, TFunc> GetParticleDrawKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IParticleSystemDraw
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dParticleSystem, dImage, TFunc>(Kernels.ParticleSystemDrawKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dParticleSystem, dImage, TFunc>)kernels[filter.GetType()];
         }
 
         private Action<Index1D, int, dParticleSystem, dImage, TFunc> GetParticleFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IParticleSystemFilter
