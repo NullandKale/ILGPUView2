@@ -418,5 +418,11 @@ namespace GPU
 
             return bmp;
         }
+
+        public static float GetRandomFloat(float v, uint seed0, float seed1, float seed2, uint counter)
+        {
+            uint seed = CreateSeed(seed0, counter, seed1, seed2);
+            return GetRandom(seed, -v, v);
+        }
     }
 }

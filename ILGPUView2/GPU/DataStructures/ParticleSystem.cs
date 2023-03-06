@@ -28,20 +28,21 @@ namespace ILGPUView2.GPU
         {
             Vec3 scale = positionRange * 2;
             Vec3 position = new Vec3(
-                (rng.NextDouble() * scale.x) - positionRange.x,
-                (rng.NextDouble() * scale.y) - positionRange.y,
-                (rng.NextDouble() * scale.z) - positionRange.z);
+                (float)(rng.NextDouble() * scale.x) - positionRange.x,
+                (float)(rng.NextDouble() * scale.y) - positionRange.y,
+                (float)(rng.NextDouble() * scale.z) - positionRange.z);
 
             scale = velocityRange * 2;
             Vec3 velocity = new Vec3(
-                (rng.NextDouble() * scale.x) - velocityRange.x,
-                (rng.NextDouble() * scale.y) - velocityRange.y,
-                (rng.NextDouble() * scale.z) - velocityRange.z);
+                (float)(rng.NextDouble() * scale.x) - velocityRange.x,
+                (float)(rng.NextDouble() * scale.y) - velocityRange.y,
+                (float)(rng.NextDouble() * scale.z) - velocityRange.z);
 
             Vec3 color = new Vec3(rng.NextDouble(), rng.NextDouble(), rng.NextDouble());
 
-            return new Particle(0, position, velocity, color); 
+            return new Particle(0, position, velocity, color);
         }
+
     }
 
     public class HostParticleSystem : IDisposable
@@ -111,6 +112,15 @@ namespace ILGPUView2.GPU
             index = index % length;
 
             return new Particle(index, positions[index], velocities[index], colors[index]);
+        }
+
+        public void Set(int index, ref Particle p)
+        {
+            index = index % length;
+
+            positions[index] = p.position;
+            velocities[index] = p.velocity;
+            colors[index] = p.color;
         }
     }
 }

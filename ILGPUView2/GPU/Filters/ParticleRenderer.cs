@@ -20,16 +20,16 @@ namespace ILGPUView2.GPU.Filters
 
         public void Draw(int tick, int particleID, dParticleSystem particles, dImage output)
         {
-            tick %= 1000;
-
-            Vec3 pos = particles.positions[particleID] + particles.velocities[particleID] * tick;
+            Vec3 pos = particles.positions[particleID];
+            RGBA32 color = new RGBA32(particles.colors[particleID]);
             Vec2 pixelPos = camera.WorldToScreenPoint(pos);
 
-            // Draw particle as a square with color at pixel position
-            int startX = (int)pixelPos.x - particleSize;
-            int startY = (int)pixelPos.y - particleSize;
-            int endX = startX + particleSize * 2;
-            int endY = startY + particleSize * 2;
+            // Draw particle as a circle with color at pixel position
+            int radius = particleSize;
+            int startX = (int)pixelPos.x - radius;
+            int startY = (int)pixelPos.y - radius;
+            int endX = startX + radius * 2;
+            int endY = startY + radius * 2;
 
             for (int y = startY; y < endY; y++)
             {
@@ -38,12 +38,18 @@ namespace ILGPUView2.GPU.Filters
                     // Check if pixel position is within image bounds
                     if (x >= 0 && x < output.width && y >= 0 && y < output.height)
                     {
-                        RGBA32 color = new RGBA32(particles.colors[particleID]);
-                        output.SetColorAt(x, y, color);
+                        // Check if pixel position is within circle bounds
+                        float dx = x - pixelPos.x;
+                        float dy = y - pixelPos.y;
+                        float distSquared = dx * dx + dy * dy;
+                        if (distSquared <= radius * radius)
+                        {
+                            output.SetColorAt(x, y, color);
+                        }
                     }
                 }
             }
         }
-
     }
+
 }

@@ -1,4 +1,5 @@
 ﻿using ILGPU.Algorithms;
+using System;
 using System.Numerics;
 
 namespace GPU
@@ -188,6 +189,54 @@ namespace GPU
                 else if (i == 1) y = value;
                 else if (i == 2) z = value;
             }
+        }
+
+        public static Vec3 HsbToRgb(Vec3 hsb)
+        {
+            float chroma = hsb.z * hsb.y;
+            float hue2 = hsb.x * 6f;
+            float x = chroma * (1f - Math.Abs(hue2 % 2f - 1f));
+            float r, g, b;
+
+            if (hue2 < 1f)
+            {
+                r = chroma;
+                g = x;
+                b = 0f;
+            }
+            else if (hue2 < 2f)
+            {
+                r = x;
+                g = chroma;
+                b = 0f;
+            }
+            else if (hue2 < 3f)
+            {
+                r = 0f;
+                g = chroma;
+                b = x;
+            }
+            else if (hue2 < 4f)
+            {
+                r = 0f;
+                g = x;
+                b = chroma;
+            }
+            else if (hue2 < 5f)
+            {
+                r = x;
+                g = 0f;
+                b = chroma;
+            }
+            else
+            {
+                r = chroma;
+                g = 0f;
+                b = x;
+            }
+
+            float m = hsb.z - chroma;
+            return new Vec3(r + m, g + m, b + m);
         }
 
         public static Vec3 lerp(Vec3 a, Vec3 b, float t)
