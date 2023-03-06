@@ -64,15 +64,27 @@ namespace ILGPUView2.GPU
             colors = new Vec3[count];
 
             Random rng = new Random();
+            Vec3 scale = range * 2;
+            Vec3 vel_scale = speedMax * 2;
 
-            for (int i = 0; i < count; i++)
+            Parallel.For(0, count, (i) =>
             {
-                Particle p = Particle.GetRandom(rng, range, speedMax);
+                Vec3 position = new Vec3(
+                    (float)(rng.NextDouble() * scale.x) - range.x,
+                    (float)(rng.NextDouble() * scale.y) - range.y,
+                    (float)(rng.NextDouble() * scale.z) - range.z);
 
-                positions[i] = p.position;
-                velocities[i] = p.velocity;
-                colors[i] = p.color;
-            }
+                Vec3 velocity = new Vec3(
+                    (float)(rng.NextDouble() * vel_scale.x) - speedMax.x,
+                    (float)(rng.NextDouble() * vel_scale.y) - speedMax.y,
+                    (float)(rng.NextDouble() * vel_scale.z) - speedMax.z);
+
+                Vec3 color = new Vec3(rng.NextDouble(), rng.NextDouble(), rng.NextDouble());
+
+                positions[i] = position;
+                velocities[i] = velocity;
+                colors[i] = color;
+            });
 
             device_positions = device.Allocate1D(positions);
             device_velocities = device.Allocate1D(velocities);
