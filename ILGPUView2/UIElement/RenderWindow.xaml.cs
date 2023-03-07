@@ -1,6 +1,7 @@
 ﻿using GPU;
 using System;
 using System.Windows;
+using System.Windows.Input;
 
 namespace UIElement
 {
@@ -20,12 +21,14 @@ namespace UIElement
             gpu = new Device(renderFrame);
 
             Loaded += Window_Loaded;
+
+            // Set up key event handler
+            KeyDown += Window_KeyDown;
         }
 
         public bool TryStart(IRenderCallback callback)
         {
             this.callback = callback;
-
             if (callback != null && loaded)
             {
                 callback.OnStart(gpu);
@@ -41,7 +44,7 @@ namespace UIElement
 
         public void Stop()
         {
-            if(callback != null)
+            if (callback != null)
             {
                 callback.OnStop();
             }
@@ -71,6 +74,12 @@ namespace UIElement
             loaded = true;
         }
 
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Call OnKeyPressed with the key pressed event and the current modifier keys
+            callback?.OnKeyPressed(e.Key, Keyboard.Modifiers);
+        }
+
         private void Window_Closed(object sender, EventArgs e)
         {
             this.Dispose();
@@ -83,6 +92,8 @@ namespace UIElement
         public void CreateUI();
         public void OnStart(Device gpu);
         public void OnRender(Device gpu);
+        public void OnKeyPressed(Key key, ModifierKeys modifiers);
         public void OnStop();
     }
+
 }

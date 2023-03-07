@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using static GPU.Kernels;
 using UIElement;
 using ILGPUView2.GPU.Filters;
+using System.Windows.Input;
 
 namespace ExampleProject.Modes
 {
@@ -75,6 +76,11 @@ namespace ExampleProject.Modes
             {
                 gpu.ExecuteFilter<LifeStartFilter>(framebuffers[0]);
             }
+        }
+
+        public void OnKeyPressed(Key key, ModifierKeys modifiers)
+        {
+
         }
     }
 

@@ -7,6 +7,7 @@ using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using ILGPUView2.GPU.Filters;
 using System;
+using System.Windows.Input;
 using UIElement;
 using static GPU.Kernels;
 using Light = GPU.RT.Light;
@@ -152,6 +153,11 @@ namespace Modes
             UIBuilder.Clear();
 
             UIBuilder.AddLabel("Debug RT");
+        }
+
+        public void OnKeyPressed(Key key, ModifierKeys modifiers)
+        {
+
         }
     }
 

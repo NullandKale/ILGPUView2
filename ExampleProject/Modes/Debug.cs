@@ -1,6 +1,7 @@
 ﻿using static GPU.Kernels;
 using GPU;
 using UIElement;
+using System.Windows.Input;
 
 namespace ExampleProject.Modes
 {
@@ -10,6 +11,11 @@ namespace ExampleProject.Modes
         {
             UIBuilder.Clear();
             UIBuilder.AddLabel("Debug Renderer");
+        }
+
+        public void OnKeyPressed(Key key, ModifierKeys modifiers)
+        {
+
         }
 
         public void OnRender(Device gpu)

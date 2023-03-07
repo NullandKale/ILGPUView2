@@ -30,7 +30,7 @@ namespace ExampleProject
             AddRenderModes();
         }
 
-        public void AddRenderModes(int default_mode = 3)
+        public void AddRenderModes(int default_mode = 2)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
             renderManager.AddRenderCallback(1, new GOL());

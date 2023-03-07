@@ -8,6 +8,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using UIElement;
 using static GPU.Kernels;
 
@@ -84,7 +85,12 @@ namespace ExampleProject.Modes
         public void OnStop()
         {
             particleSystem.Dispose();
-        } 
+        }
+
+        public void OnKeyPressed(Key key, ModifierKeys modifiers)
+        {
+
+        }
     }
 
     public struct ParticleUpdate : IParticleSystemUpdate

@@ -13,6 +13,7 @@ using ILGPU.Runtime;
 using ILGPU;
 using System.Windows.Controls;
 using ILGPUView2.GPU.Filters;
+using System.Windows.Input;
 
 namespace ExampleProject.Modes
 {
@@ -111,6 +112,11 @@ namespace ExampleProject.Modes
         }
 
         public void SetMode(int mode)
+        {
+
+        }
+
+        public void OnKeyPressed(Key key, ModifierKeys modifiers)
         {
 
         }

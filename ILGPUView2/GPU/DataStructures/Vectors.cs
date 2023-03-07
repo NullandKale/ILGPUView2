@@ -477,6 +477,14 @@ namespace GPU
             return toReturn;
         }
 
+        public static Vec3 Clamp(Vec3 value, Vec3 min, Vec3 max)
+        {
+            float x = XMath.Clamp(value.x, min.x, max.x);
+            float y = XMath.Clamp(value.y, min.y, max.y);
+            float z = XMath.Clamp(value.z, min.z, max.z);
+            return new Vec3(x, y, z);
+        }
+
         public static implicit operator Vector3(Vec3 d)
         {
             return new Vector3((float)d.x, (float)d.y, (float)d.z);

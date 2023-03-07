@@ -112,9 +112,9 @@ DebugRT | Ray tracing demo with reflections and TAA
 -------------------------------------------------------
 
 <p float="left">
-<img src="./assets/modes/Fractal.png" height="200" alt="Mandelbrot Zoom Example Screenshot" display="inline"/>
+<img src="./assets/modes/Fractal.png" height="200" alt="Julia Set Example Screenshot" display="inline"/>
 </p>
-Fractal | Mandelbrot Zoom
+Fractal | Mandelbrot and Julia Sets with WASD + QE controls!
 
 -------------------------------------------------------
 
