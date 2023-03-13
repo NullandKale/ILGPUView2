@@ -13,15 +13,11 @@ namespace ExampleProject
     /// </summary>
     public partial class MainWindow : Window, IDisposable
     {
-        public static MainWindow instance;
-
         public RenderManager renderManager;
 
         public MainWindow()
         {
             InitializeComponent();
-
-            instance = this;
 
             renderManager = new RenderManager();
             UIBuilder.SetFPSCallback((string fps) => { label.Content= fps; });
@@ -30,16 +26,24 @@ namespace ExampleProject
             AddRenderModes();
         }
 
-        public void AddRenderModes(int default_mode = 2)
+        public void AddRenderModes(int default_mode = 1)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
-            renderManager.AddRenderCallback(1, new GOL());
-            renderManager.AddRenderCallback(2, new Fractal());
-            renderManager.AddRenderCallback(3, new Particles());
-            renderManager.AddRenderCallback(4, new ImageFilter());
-            renderManager.AddRenderCallback(5, new DebugRT());
+            renderManager.AddRenderCallback(1, new DrawCircles());
+            renderManager.AddRenderCallback(2, new GOL());
+            renderManager.AddRenderCallback(3, new Fractal());
+            renderManager.AddRenderCallback(4, new Particles());
+            renderManager.AddRenderCallback(5, new ImageFilter());
+            renderManager.AddRenderCallback(6, new DebugRT());
 
-            mode.ItemsSource = new string[] { "Debug", "Game of Life", "Fractal", "Particle Sim", "Image Filter", "DebugRT" };
+            mode.ItemsSource = new string[] { 
+                "Debug",
+                "Draw Circles", 
+                "Game of Life", 
+                "Fractal", 
+                "Particle Sim", 
+                "Image Filter", 
+                "DebugRT" };
 
             mode.SelectionChanged += (sender, args) =>
             {

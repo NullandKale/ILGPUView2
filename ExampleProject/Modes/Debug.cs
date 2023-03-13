@@ -45,11 +45,13 @@ namespace ExampleProject.Modes
         {
             if ((int)(x * 10) % 2 == (int)(y * 10) % 2)
             {
+                // blue to red gradient
                 return new RGBA32((byte)(x * 255), 0, (byte)(y * 255), 255);
             }
             else
             {
-                return new RGBA32(0, 0, 0, 255);
+                // outputs grey color corresponding to the tick value
+                return new RGBA32((byte)(tick % 255), (byte)(tick % 255), (byte)(tick % 255), 255);
             }
 
         }

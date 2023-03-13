@@ -1,4 +1,5 @@
 ﻿using ILGPU;
+using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using System;
 using System.Drawing;
@@ -109,7 +110,7 @@ namespace GPU
         }
     }
 
-    public struct dImage : IImageFilter
+    public struct dImage
     {
         public int width;
         public int height;
@@ -151,6 +152,33 @@ namespace GPU
             data[index + 1] = g;
             data[index + 2] = b;
             data[index + 3] = a;
+        }
+
+        public void AddColorAt(int x, int y, Vec3 color, float depth)
+        {
+            if (x < 0 || x >= width || y < 0 || y >= height)
+            {
+                return;
+            }
+
+            int index = (y * width + x) * 4;
+
+            byte a = data[index + 3];
+
+            byte depthValue = (byte)(depth * 255.0f);
+
+            if (depthValue < a)
+            {
+                byte r = (byte)XMath.Clamp(color.x * 255.0f, 0, 255);
+                byte g = (byte)XMath.Clamp(color.y * 255.0f, 0, 255);
+                byte b = (byte)XMath.Clamp(color.z * 255.0f, 0, 255);
+                a = depthValue;
+
+                data[index + 0] = r;
+                data[index + 1] = g;
+                data[index + 2] = b;
+                data[index + 3] = a;
+            }
         }
 
         public void SetColorAt(int x, int y, RGBA32 color)
@@ -200,11 +228,6 @@ namespace GPU
         public void SetColorAt(float x, float y, RGBA32 color)
         {
             SetColorAt(x, y, color.r, color.g, color.b, color.a);
-        }
-
-        public RGBA32 Apply(int tick, float x, float y, dImage framebuffer)
-        {
-            throw new NotImplementedException();
         }
     }
 }

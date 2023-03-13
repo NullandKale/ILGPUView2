@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using ILGPU.Algorithms;
+using System.Linq;
 
 namespace GPU
 {
@@ -243,6 +244,8 @@ namespace GPU
 
     public static class Utils
     {
+
+
         public static bool isLessThanWithin(float val, float threshold, float range)
         {
             return (val < threshold + range);
