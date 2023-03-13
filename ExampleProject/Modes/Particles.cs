@@ -35,7 +35,8 @@ namespace ExampleProject.Modes
             UIBuilder.AddLabel("Particle Sim");
 
             // this can crash your computer if it gets to high
-            long maxParticles = 1_000_000;
+            long maxParticles = 1_000_000; // should work on most machines with a dedicated GPU
+            //long maxParticles = 1_000; // should work on CPU
 
             var particleCountLabel = UIBuilder.AddLabel("");
             UIBuilder.AddSlider(particleCountLabel, "Particle Count: ", 10, maxParticles, maxParticles, (newParticleCount) => 
@@ -44,10 +45,10 @@ namespace ExampleProject.Modes
             });
 
             var particleSizeLabel = UIBuilder.AddLabel("");
-            UIBuilder.AddSlider(particleSizeLabel, "Particle Size: ", 1, 10, 1, (newParticleSize) => { particleSize = (int)newParticleSize; });
+            UIBuilder.AddSlider(particleSizeLabel, "Particle Size: ", 1, 50, 2, (newParticleSize) => { particleSize = (int)newParticleSize; });
 
             var gravityLabel = UIBuilder.AddLabel("");
-            UIBuilder.AddSlider(gravityLabel, "Gravity: ", 0, 0.0001f, 0.00001f, (newGravity) => { gravity = newGravity; });
+            UIBuilder.AddSlider(gravityLabel, "Gravity: ", 0, 0.0001f, 0.0001f, (newGravity) => { gravity = newGravity; });
 
             var restitutionLabel = UIBuilder.AddLabel("");
             UIBuilder.AddSlider(restitutionLabel, "Restitution: ", 0, 1, 0.85f, (newRestitution) => { restitution = newRestitution; });
@@ -79,7 +80,7 @@ namespace ExampleProject.Modes
             gpu.ExecuteParticleSystemUpdate(particleSystem, new ParticleUpdate(-gravity, restitution, colorFactor, randomFactor, new Vec3(-10, -10, -10), new Vec3(10, 10, 10)));
             gpu.DrawParticleSystem(gpu.framebuffer, particleSystem, new ParticleRenderer(
                 new Camera3D(new Vec3(0, 0, -16), new Vec3(0, 0, 0), new Vec3(0, 1, 0),
-                gpu.framebuffer.width, gpu.framebuffer.height, 40f), particleSize));
+                gpu.framebuffer.width, gpu.framebuffer.height, 40f), particleSize, 10f));
         }
 
         public void OnStop()
@@ -122,7 +123,7 @@ namespace ExampleProject.Modes
 
             // Set particle color based on velocity magnitude using HSB color space
             float velocityMagnitude = p.velocity.length() * colorFactor;
-            p.color = Vec3.HsbToRgb(new Vec3((p.id / (float)particles.length), 1f, velocityMagnitude));
+            p.color = Vec3.HsbToRgb(new Vec3((p.id / (float)particles.length), velocityMagnitude, 0.25 + velocityMagnitude));
         }
 
         private void Bounce(int tick, ref Particle p)

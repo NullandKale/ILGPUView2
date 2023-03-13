@@ -5,6 +5,7 @@ using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPUView2.GPU;
+using ILGPUView2.GPU.DataStructures;
 using ILGPUView2.GPU.RT;
 using System;
 using System.Collections.Generic;
@@ -135,7 +136,7 @@ namespace GPU
                     }
                 }
 
-                //Thread.Sleep(1);
+                //Thread.Sleep(15);
 
                 UpdateTimer();
             }
@@ -161,6 +162,18 @@ namespace GPU
             double FPS = 1000.0 / frameTimeMS;
 
             return $"FPS: {FPS:0.00} {(frameTimeMS):0.00}MS";
+        }
+
+        public void Execute<T, TFunc>(GPUBuffer<T> GPUBuffer, TFunc func = default) where T : unmanaged where TFunc : unmanaged, IKernel<T>
+        {
+            var kernel = GetKernel<T, TFunc>(func);
+            kernel((int)GPUBuffer.size, ticks, GPUBuffer.toGPU(), func);
+        }
+
+        public void ExecuteMask<T, TFunc>(GPUImage output, GPUBuffer<T> GPUBuffer, TFunc func = default) where T : unmanaged where TFunc : unmanaged, IKernelMask<T>
+        {
+            var kernel = GetKernelMask<T, TFunc>(func);
+            kernel((int)GPUBuffer.size, ticks, output.toDevice(this), GPUBuffer.toGPU(), func);
         }
 
         public void ExecuteFilter<TFunc>(GPUImage output, TFunc filter = default) where TFunc : unmanaged, IImageFilter
@@ -221,6 +234,28 @@ namespace GPU
         {
             var kernel = GetVoxelFilterKernel(filter);
             kernel(output.width * output.height, ticks, voxels.toDevice(), output.toDevice(this), filter);
+        }
+
+        private Action<Index1D, int, dBuffer<T>, TFunc> GetKernel<T, TFunc>(TFunc filter = default) where TFunc : unmanaged, IKernel<T> where T : unmanaged
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dBuffer<T>, TFunc>(Kernels.KernelKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dBuffer<T>, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, int, dImage, dBuffer<T>, TFunc> GetKernelMask<T, TFunc>(TFunc filter = default) where TFunc : unmanaged, IKernelMask<T> where T : unmanaged
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, dBuffer<T>, TFunc>(Kernels.KernelMaskKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dImage, dBuffer<T>, TFunc>)kernels[filter.GetType()];
         }
 
         private Action<Index1D, int, dImage, TFunc> GetFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IImageFilter

@@ -116,7 +116,7 @@ namespace Modes
             this.device = gpu.device;
             
             //GenerateSpheres(50);
-            GenerateSpheresGPT0(0);
+            GenerateSpheresGPT0(10);
         }
 
         public void GenerateSpheres(int count)

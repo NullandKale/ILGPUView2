@@ -11,10 +11,12 @@ namespace ILGPUView2.GPU.Filters
     public struct ParticleRenderer : IParticleSystemDraw
     {
         public Camera3D camera;
+        public float worldScale;
         public int particleSize;
-        public ParticleRenderer(Camera3D camera, int particleSize)
+        public ParticleRenderer(Camera3D camera, int particleSize, float worldScale)
         {
             this.camera = camera;
+            this.worldScale = worldScale;
             this.particleSize = particleSize;
         }
 
@@ -44,7 +46,9 @@ namespace ILGPUView2.GPU.Filters
                         float distSquared = dx * dx + dy * dy;
                         if (distSquared <= radius * radius)
                         {
-                            output.SetColorAt(x, y, color);
+                            //                      
+                            output.AddColorAt(x, y, particles.colors[particleID], (pos.z + worldScale) / (2f * worldScale));
+                            //output.SetColorAt(x, y, color);
                         }
                     }
                 }

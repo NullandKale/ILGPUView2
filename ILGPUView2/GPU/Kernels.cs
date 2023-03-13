@@ -4,11 +4,21 @@ using GPU.RT;
 using Camera;
 using ILGPUView2.GPU;
 using ILGPUView2.GPU.RT;
+using ILGPUView2.GPU.DataStructures;
 
 namespace GPU
 {
     public static class Kernels
     {
+        public interface IKernel<T> where T : unmanaged
+        {
+            void Apply(int tick, int index, dBuffer<T> dBuffer);
+        }
+        public interface IKernelMask<T> where T : unmanaged
+        {
+            void Apply(int tick, int index, dImage framebuffer, dBuffer<T> dBuffer);
+        }
+
         public interface ISphereImageFilter
         {
             RGBA32 Apply(int tick, float x, float y, dImage output, ArrayView1D<Sphere, Stride1D.Dense> spheres);
@@ -79,6 +89,16 @@ namespace GPU
         public static void ParticleSystemUpdateKernel<TFunc>(Index1D index, int tick, dParticleSystem particles, TFunc filter) where TFunc : unmanaged, IParticleSystemUpdate
         {
             filter.Update(tick, index.X, particles);
+        }
+
+        public static void KernelKernel<TFunc, T>(Index1D index, int tick, dBuffer<T> output, TFunc filter) where TFunc : unmanaged, IKernel<T> where T : unmanaged
+        {
+            filter.Apply(tick, index.X, output);
+        }
+
+        public static void KernelMaskKernel<TFunc, T>(Index1D index, int tick, dImage framebuffer, dBuffer<T> output, TFunc filter) where TFunc : unmanaged, IKernelMask<T> where T : unmanaged
+        {
+            filter.Apply(tick, index, framebuffer, output);
         }
 
         public static void ImageFilterKernel<TFunc>(Index1D index, int tick, dImage output, TFunc filter) where TFunc : unmanaged, IImageFilter

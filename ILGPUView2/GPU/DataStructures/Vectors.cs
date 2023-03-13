@@ -92,6 +92,14 @@ namespace GPU
         {
             return a.x * b.x + a.y * b.y;
         }
+
+        public static float Distance(Vec2 point, Vec2 center)
+        {
+            float dx = point.x - center.x;
+            float dy = point.y - center.y;
+            return XMath.Sqrt(dx * dx + dy * dy);
+        }
+
     }
 
 
