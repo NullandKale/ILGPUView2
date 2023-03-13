@@ -16,6 +16,10 @@ Above are some screenshots of the DebugRT example. A single file sphere ray trac
 3. Open ILGPUView2.sln
 4. Open ExampleProject/Modes/Debug.cs
 
+# Video Tutorials
+
+* [GPU Accelerated Circle Rendering in C#](https://www.youtube.com/watch?v=HgvEJPx6cx4)
+
 # Example Render Mode
 
 ```csharp
