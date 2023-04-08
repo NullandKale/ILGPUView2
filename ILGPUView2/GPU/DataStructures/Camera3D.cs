@@ -25,6 +25,44 @@ namespace GPU
         public float reciprocalWidth;
         public float tanHalfFov;
 
+        public Mat4x4 mvp = new Mat4x4();
+
+        public Camera3D(Vec3 origin, Vec3 lookAt, Vec3 up, int width, int height, float verticalFov)
+        {
+            this.width = new SpecializedValue<int>(width);
+            this.height = new SpecializedValue<int>(height);
+
+            this.verticalFov = verticalFov;
+            this.origin = origin;
+            this.lookAt = lookAt;
+            this.up = up;
+
+            axis = OrthoNormalBasis.fromZY(Vec3.unitVector(lookAt - origin), up);
+
+            aspectRatio = ((float)width / (float)height);
+            cameraPlaneDist = 1.0f / XMath.Tan(verticalFov * XMath.PI / 360.0f);
+            reciprocalHeight = 1.0f / height;
+            reciprocalWidth = 1.0f / width;
+            tanHalfFov = XMath.Tan(verticalFov / 2f);
+            mvp = Mat4x4.GetViewProjectionMatrix(this).inverse();
+        }
+
+        public Mat4x4 toMat4x4()
+        {
+            Vec3 zAxis = (origin - lookAt).normalized();
+            Vec3 xAxis = Vec3.cross(up, zAxis).normalized();
+            Vec3 yAxis = Vec3.cross(zAxis, xAxis);
+
+            Mat4x4 mat = new Mat4x4();
+
+            mat.data_0_0 = xAxis.x; mat.data_0_1 = yAxis.x; mat.data_0_2 = zAxis.x; mat.data_0_3 = 0;
+            mat.data_1_0 = xAxis.y; mat.data_1_1 = yAxis.y; mat.data_1_2 = zAxis.y; mat.data_1_3 = 0;
+            mat.data_2_0 = xAxis.z; mat.data_2_1 = yAxis.z; mat.data_2_2 = zAxis.z; mat.data_2_3 = 0;
+            mat.data_3_0 = -Vec3.dot(xAxis, origin); mat.data_3_1 = -Vec3.dot(yAxis, origin); mat.data_3_2 = -Vec3.dot(zAxis, origin); mat.data_3_3 = 1;
+
+            return mat;
+        }
+
         public Camera3D(Camera3D camera, Vec3 movement, Vec3 turn)
         {
             this.width = camera.width;
@@ -55,6 +93,8 @@ namespace GPU
             reciprocalHeight = 1.0f / height;
             reciprocalWidth = 1.0f / width;
             tanHalfFov = XMath.Tan(verticalFov / 2f);
+            mvp = Mat4x4.GetViewProjectionMatrix(this).inverse();
+
         }
 
         public Camera3D(Camera3D camera, float vfov)
@@ -75,6 +115,8 @@ namespace GPU
             reciprocalHeight = 1.0f / height;
             reciprocalWidth = 1.0f / width;
             tanHalfFov = XMath.Tan(verticalFov / 2f);
+            mvp = Mat4x4.GetViewProjectionMatrix(this).inverse();
+
         }
 
         public Camera3D(Camera3D camera, int width, int height)
@@ -95,26 +137,11 @@ namespace GPU
             reciprocalHeight = 1.0f / height;
             reciprocalWidth = 1.0f / width;
             tanHalfFov = XMath.Tan(verticalFov / 2f);
+            mvp = Mat4x4.GetViewProjectionMatrix(this).inverse();
+
         }
 
-        public Camera3D(Vec3 origin, Vec3 lookAt, Vec3 up, int width, int height, float verticalFov)
-        {
-            this.width = new SpecializedValue<int>(width);
-            this.height = new SpecializedValue<int>(height);
 
-            this.verticalFov = verticalFov;
-            this.origin = origin;
-            this.lookAt = lookAt;
-            this.up = up;
-
-            axis = OrthoNormalBasis.fromZY(Vec3.unitVector(lookAt - origin), up);
-
-            aspectRatio = ((float)width / (float)height);
-            cameraPlaneDist = 1.0f / XMath.Tan(verticalFov * XMath.PI / 360.0f);
-            reciprocalHeight = 1.0f / height;
-            reciprocalWidth = 1.0f / width;
-            tanHalfFov = XMath.Tan(verticalFov / 2f);
-        }
 
 
         private Ray rayFromUnit(float x, float y)
@@ -148,6 +175,11 @@ namespace GPU
 
             Vec2 screenPoint = new Vec2((x + 1) * (width / 2), (y + 1) * (height / 2));
             return screenPoint;
+        }
+
+        public Mat4x4 GetViewProjectionMatrixInverse()
+        {
+            return mvp;
         }
     }
 

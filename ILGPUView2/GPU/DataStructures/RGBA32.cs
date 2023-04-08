@@ -18,6 +18,14 @@ namespace GPU
             a = (byte)(value);
         }
 
+        public RGBA32(float x, float y, float z)
+        {
+            r = (byte)(x * 255);
+            g = (byte)(y * 255);
+            b = (byte)(z * 255);
+            a = 255;
+        }
+
         public RGBA32(Vec3 col)
         {
             r = (byte)(col.x * 255);

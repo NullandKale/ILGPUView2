@@ -69,7 +69,6 @@ namespace GPU
             void Update(int tick, int id, dParticleSystem particles);
         }
 
-
         public static void ParticleSystemFilterKernel<TFunc>(Index1D index, int tick, dParticleSystem particles, dImage output, TFunc filter) where TFunc : unmanaged, IParticleSystemFilter
         {
             int x = index.X % output.width;

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:UI="clr-namespace:UIElement"
         mc:Ignorable="d"
-        Title="RenderWindow" Height="400" Width="800" Closed="Window_Closed">
+        Title="RenderWindow" Height="400" Width="800" Closed="Window_Closed" WindowState="Maximized">
     <Grid>
         <UI:RenderFrame x:Name="renderFrame"/>
     </Grid>

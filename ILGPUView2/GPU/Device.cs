@@ -43,7 +43,7 @@ namespace GPU
             bool debug = false;
             this.renderFrame = renderFrame;
 
-            context = Context.Create(builder => builder.CPU().Cuda().AutoAssertions().Math(MathMode.Fast).EnableAlgorithms().Optimize(debug ? OptimizationLevel.Debug : OptimizationLevel.Debug));
+            context = Context.Create(builder => builder.CPU().Cuda().Assertions().EnableAlgorithms().Optimize(debug ? OptimizationLevel.Debug : OptimizationLevel.Debug));
             device = context.GetPreferredDevice(preferCPU: debug)
                                       .CreateAccelerator(context);
             kernels = new Dictionary<Type, object>();
@@ -100,6 +100,8 @@ namespace GPU
         public void Render()
         {
             timer = new Stopwatch();
+
+            device.Synchronize();
 
             while (isRunning)
             {

@@ -102,6 +102,21 @@ namespace GPU
 
     }
 
+    public class Vec4
+    {
+        public float x, y, z, w;
+
+        public Vec4(float x, float y, float z, float w)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = w;
+        }
+
+        // Add other necessary methods and operator overloads here
+    }
+
 
     public struct Vec3
     {
@@ -367,6 +382,11 @@ namespace GPU
             return v / XMath.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
         }
 
+        public static Vec3 normalize(Vec3 v)
+        {
+            return v / XMath.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        }
+
 
         public static Vec3 reflect(Vec3 normal, Vec3 incomming)
         {
@@ -491,6 +511,25 @@ namespace GPU
             float y = XMath.Clamp(value.y, min.y, max.y);
             float z = XMath.Clamp(value.z, min.z, max.z);
             return new Vec3(x, y, z);
+        }
+        public static Vec3 Normalize(Vec3 d)
+        {
+            float mag = d.magnitude();
+            if (mag == 0)
+                return d;
+
+            return new Vec3(d.x / mag, d.y / mag, d.z / mag);
+        }
+
+        public float magnitude()
+        {
+            return XMath.Sqrt(x * x + y * y + z * z);
+        }
+
+        internal Vec3 normalized()
+        {
+            float length = magnitude();
+            return new Vec3(x / length, y / length, z / length);
         }
 
         public static implicit operator Vector3(Vec3 d)

@@ -1,4 +1,5 @@
 ﻿using ExampleProject.Modes;
+using ExampleProject.Modes.Rasterizer;
 using GPU;
 using Modes;
 using System;
@@ -29,15 +30,17 @@ namespace ExampleProject
         public void AddRenderModes(int default_mode = 1)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
-            renderManager.AddRenderCallback(1, new DrawCircles());
-            renderManager.AddRenderCallback(2, new GOL());
-            renderManager.AddRenderCallback(3, new Fractal());
-            renderManager.AddRenderCallback(4, new Particles());
-            renderManager.AddRenderCallback(5, new ImageFilter());
-            renderManager.AddRenderCallback(6, new DebugRT());
+            renderManager.AddRenderCallback(1, new TriangleRasterizer());
+            renderManager.AddRenderCallback(2, new DrawCircles());
+            renderManager.AddRenderCallback(3, new GOL());
+            renderManager.AddRenderCallback(4, new Fractal());
+            renderManager.AddRenderCallback(5, new Particles());
+            renderManager.AddRenderCallback(6, new ImageFilter());
+            renderManager.AddRenderCallback(7, new DebugRT());
 
             mode.ItemsSource = new string[] { 
                 "Debug",
+                "Triangle Rasterizer",
                 "Draw Circles", 
                 "Game of Life", 
                 "Fractal", 
