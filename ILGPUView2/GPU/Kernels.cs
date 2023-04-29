@@ -5,6 +5,8 @@ using Camera;
 using ILGPUView2.GPU;
 using ILGPUView2.GPU.RT;
 using ILGPUView2.GPU.DataStructures;
+using System.Runtime.CompilerServices;
+using ILGPUView2.GPU.Filters;
 
 namespace GPU
 {
@@ -39,19 +41,25 @@ namespace GPU
             RGBA32 Apply(int tick, float x, float y, dImage output, dImage input);
         }
 
+        public interface ITexturedMask
+        {
+            RGBA32 Apply(int tick, float x, float y, dImage output, dImage mask, dImage texture);
+        }
+
+
         public interface IFramebufferMask
         {
             RGBA32 Apply(int tick, float x, float y, dImage output, FrameBuffer input);
         }
 
-        public interface IVoxelFramebufferFilter
+        public interface IVoxelMask
         {
-            void Apply(int tick, float x, float y, float z, dVoxels voxels, FrameBuffer images);
+            void Apply(int tick, float x, float y, float z, dVoxels voxels, dImage depth, dImage image);
         }
 
         public interface IVoxelFilter
         {
-            RGBA32 Apply(int tick, float x, float y, dVoxels voxels, dImage output);
+            RGBA32 Apply(dImage output, int tick, float x, float y, dVoxels voxels);
         }
 
         public interface IParticleSystemFilter
@@ -110,6 +118,32 @@ namespace GPU
             double v = (double)y / (double)output.height;
 
             output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output));
+        }
+
+        public static void ImageToRGB(Index1D index, ArrayView1D<byte, Stride1D.Dense> output, dImage input)
+        {
+            int x = index.X % input.width;
+            int y = index.X / input.width;
+
+            RGBA32 color = input.GetColorAt(x, y);
+            
+            output[index * 3 + 0] = color.r;
+            output[index * 3 + 1] = color.g;
+            output[index * 3 + 2] = color.b;
+        }
+
+        public static void RGBToImage(Index1D index, dImage output, ArrayView1D<byte, Stride1D.Dense> input)
+        {
+            int x = index.X % output.width;
+            int y = index.X / output.width;
+
+            RGBA32 color = new RGBA32(0, 0, 0, 255);
+
+            color.r = input[index * 3 + 0];
+            color.g = input[index * 3 + 1];
+            color.b = input[index * 3 + 2]; 
+
+            output.SetColorAt(x, y, color);
         }
 
         private static float GenerateRandomValue(int sequenceX, int sequenceY, int tick)
@@ -194,6 +228,25 @@ namespace GPU
             output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output, input));
         }
 
+        public static void FilteredDepthKernel(Index1D index, dImage output, FilterDepth filter)
+        {
+            int x = index.X % output.width;
+            int y = index.X / output.width;
+
+            output.SetColorAt(x, y, filter.Apply(x, y, output));
+        }
+
+        public static void TexturedMaskKernel<TFunc>(Index1D index, int tick, dImage output, dImage mask, dImage texture, TFunc filter) where TFunc : unmanaged, ITexturedMask
+        {
+            int x = index.X % output.width;
+            int y = index.X / output.width;
+
+            double u = (double)x / (double)output.width;
+            double v = (double)y / (double)output.height;
+
+            output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output, mask, texture));
+        }
+
         public static void FramebufferMaskKernel<TFunc>(Index1D index, int tick, dImage output, FrameBuffer input, TFunc filter) where TFunc : unmanaged, IFramebufferMask
         {
             int x = index.X % output.width;
@@ -205,12 +258,12 @@ namespace GPU
             output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output, input));
         }
 
-        public static void VoxelFramebufferFilterKernel<TFunc>(Index2D index, int tick, dVoxels voxels, FrameBuffer images, TFunc filter) where TFunc : unmanaged, IVoxelFramebufferFilter
+        public static void VoxelFramebufferFilterKernel<TFunc>(Index2D index, int tick, dVoxels voxels, dImage depthTexture, dImage imageTexture, TFunc filter) where TFunc : unmanaged, IVoxelMask
         {
             for (int i = 0; i < voxels.zSize; i++)
             {
                 float z = i / (float)voxels.zSize;
-                filter.Apply(tick, index.X / (float)voxels.xSize, index.Y / (float)voxels.ySize, z, voxels, images);
+                filter.Apply(tick, index.X / (float)voxels.xSize, index.Y / (float)voxels.ySize, z, voxels, depthTexture, imageTexture);
             }
         }
 
@@ -222,7 +275,7 @@ namespace GPU
             double u = (double)x / (double)output.width;
             double v = (double)y / (double)output.height;
 
-            output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, voxels, output));
+            output.SetColorAt(x, y, filter.Apply(output, tick, (float)u, (float)v, voxels));
         }
     }
 }

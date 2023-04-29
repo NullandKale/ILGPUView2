@@ -18,6 +18,11 @@ namespace ExampleProject.Modes
 
         }
 
+        public void OnLateRender(Device gpu)
+        {
+
+        }
+
         public void OnRender(Device gpu)
         {
             gpu.ExecuteFilter<DebugFilter>(gpu.framebuffer);

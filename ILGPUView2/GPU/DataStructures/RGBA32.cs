@@ -1,28 +1,59 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace GPU
 {
-    [StructLayout(LayoutKind.Sequential, Size = 4)]
+    [StructLayout(LayoutKind.Sequential, Size = 4, Pack = 4)]
     public struct RGBA32
     {
-        public byte r;
+        public byte a;
         public byte g;
         public byte b;
-        public byte a;
+        public byte r;
 
-        public RGBA32(int value)
+        public unsafe RGBA32(int value)
         {
-            r = (byte)(value >> 24);
-            g = (byte)(value >> 16);
-            b = (byte)(value >> 8);
-            a = (byte)(value);
+            int* valuePtr = &value;
+            byte* bytePtr = (byte*)valuePtr;
+            r = bytePtr[0];
+            g = bytePtr[1];
+            b = bytePtr[2];
+            a = bytePtr[3];
+        }
+
+        public unsafe int ToInt()
+        {
+            int result;
+            int* resultPtr = &result;
+            byte* bytePtr = (byte*)resultPtr;
+            bytePtr[0] = r;
+            bytePtr[1] = g;
+            bytePtr[2] = b;
+            bytePtr[3] = a;
+            return result;
+        }
+
+        public RGBA32()
+        {
+            r = 0;
+            g = 0;
+            b = 0;
+            a = 255;
         }
 
         public RGBA32(Vec3 col)
         {
-            r = (byte)(col.x * 255);
+            r = (byte)(col.z * 255);
             g = (byte)(col.y * 255);
-            b = (byte)(col.z * 255);
+            b = (byte)(col.x * 255);
+            a = 255;
+        }
+
+        public RGBA32(float x, float y, float z)
+        {
+            r = (byte)(x * 255);
+            g = (byte)(y * 255);
+            b = (byte)(z * 255);
             a = 255;
         }
 
@@ -40,11 +71,6 @@ namespace GPU
             this.g = g;
             this.b = b;
             this.a = a;
-        }
-
-        public int ToInt()
-        {
-            return (r << 24) | (g << 16) | (b << 8) | a;
         }
 
         public Vec3 toVec3()

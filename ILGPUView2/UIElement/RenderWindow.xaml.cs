@@ -1,5 +1,6 @@
 ﻿using GPU;
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 
@@ -14,9 +15,11 @@ namespace UIElement
         IRenderCallback callback;
         bool loaded = false;
 
-        public RenderWindow()
+        public RenderWindow(IRenderCallback callback)
         {
             InitializeComponent();
+
+            this.callback = callback;
 
             gpu = new Device(renderFrame);
 
@@ -26,15 +29,14 @@ namespace UIElement
             KeyDown += Window_KeyDown;
         }
 
-        public bool TryStart(IRenderCallback callback)
+        public bool TryStart()
         {
-            this.callback = callback;
             if (callback != null && loaded)
             {
                 callback.OnStart(gpu);
                 callback.CreateUI();
 
-                gpu.Start(callback.OnRender);
+                gpu.Start(callback.OnRender, callback.OnLateRender);
 
                 return true;
             }
@@ -84,6 +86,10 @@ namespace UIElement
         {
             this.Dispose();
         }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+        }
     }
 
     public interface IRenderCallback
@@ -94,6 +100,7 @@ namespace UIElement
         public void OnRender(Device gpu);
         public void OnKeyPressed(Key key, ModifierKeys modifiers);
         public void OnStop();
+        void OnLateRender(Device obj);
     }
 
 }

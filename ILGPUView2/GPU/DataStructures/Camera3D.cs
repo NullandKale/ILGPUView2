@@ -119,9 +119,9 @@ namespace GPU
 
         private Ray rayFromUnit(float x, float y)
         {
-            Vec3 xContrib = axis.x * -x * aspectRatio;
-            Vec3 yContrib = axis.y * -y;
-            Vec3 zContrib = axis.z * cameraPlaneDist;
+            Vec3 xContrib = axis.x * x * aspectRatio;
+            Vec3 yContrib = axis.y * y;
+            Vec3 zContrib = -axis.z * cameraPlaneDist;
             Vec3 direction = Vec3.unitVector(xContrib + yContrib + zContrib);
 
             return new Ray(origin, direction);
@@ -244,6 +244,12 @@ namespace GPU
         {
             return a + (t * b);
         }
+
+        public Vec3 pointOnPlaneAtDistance(Vec3 n, Vec3 p0)
+        {
+            float t = Vec3.dot(p0 - a, n) / Vec3.dot(b, n);
+            return pointAtParameter(t);
+        }
     }
 
     public struct AABB
@@ -270,6 +276,14 @@ namespace GPU
             return (min + max) / 2f;
         }
 
+        public bool Contains(Vec3 point)
+        {
+            return point.x >= min.x && point.x <= max.x
+                && point.y >= min.y && point.y <= max.y
+                && point.z >= min.z && point.z <= max.z;
+        }
+
+
         public bool Intersect(Ray ray, out float t_max)
         {
             // Compute the inverse direction of the ray
@@ -285,6 +299,28 @@ namespace GPU
 
             // Compute the t-values for the entry and exit points of the ray in the AABB
             float t_min = XMath.Max(XMath.Max(XMath.Min(t_x1, t_x2), XMath.Min(t_y1, t_y2)), XMath.Min(t_z1, t_z2));
+            t_max = XMath.Min(XMath.Min(XMath.Max(t_x1, t_x2), XMath.Max(t_y1, t_y2)), XMath.Max(t_z1, t_z2));
+
+            // Check if there is a valid intersection
+            return (t_min < t_max) && (t_min < t_max && t_min < t_max);
+        }
+
+
+        public bool Intersect(Ray ray, out float t_min, out float t_max)
+        {
+            // Compute the inverse direction of the ray
+            Vec3 inv_direction = new Vector3(1.0f / ray.b.x, 1.0f / ray.b.y, 1.0f / ray.b.z);
+
+            // Compute the t-values for the intersections of the ray with the slabs of the AABB
+            float t_x1 = (min.x - ray.a.x) * inv_direction.x;
+            float t_x2 = (max.x - ray.a.x) * inv_direction.x;
+            float t_y1 = (min.y - ray.a.y) * inv_direction.y;
+            float t_y2 = (max.y - ray.a.y) * inv_direction.y;
+            float t_z1 = (min.z - ray.a.z) * inv_direction.z;
+            float t_z2 = (max.z - ray.a.z) * inv_direction.z;
+
+            // Compute the t-values for the entry and exit points of the ray in the AABB
+            t_min = XMath.Max(XMath.Max(XMath.Min(t_x1, t_x2), XMath.Min(t_y1, t_y2)), XMath.Min(t_z1, t_z2));
             t_max = XMath.Min(XMath.Min(XMath.Max(t_x1, t_x2), XMath.Max(t_y1, t_y2)), XMath.Max(t_z1, t_z2));
 
             // Check if there is a valid intersection
@@ -328,5 +364,94 @@ namespace GPU
 
             return new AABB(min, max);
         }
+
+        public Vec3 NearestIntersectionPoint(Ray ray)
+        {
+            Vec3 intersectionPoint = new Vec3();
+
+            for (int i = 0; i < 3; i++)
+            {
+                float t = (min[i] - ray.a[i]) / ray.b[i];
+                Vec3 candidatePoint = ray.a + ray.b * t;
+
+                if (candidatePoint.x >= min.x && candidatePoint.x <= max.x &&
+                    candidatePoint.y >= min.y && candidatePoint.y <= max.y &&
+                    candidatePoint.z >= min.z && candidatePoint.z <= max.z)
+                {
+                    intersectionPoint = candidatePoint;
+                    break;
+                }
+
+                t = (max[i] - ray.a[i]) / ray.b[i];
+                candidatePoint = ray.a + ray.b * t;
+
+                if (candidatePoint.x >= min.x && candidatePoint.x <= max.x &&
+                    candidatePoint.y >= min.y && candidatePoint.y <= max.y &&
+                    candidatePoint.z >= min.z && candidatePoint.z <= max.z)
+                {
+                    intersectionPoint = candidatePoint;
+                    break;
+                }
+            }
+
+            return intersectionPoint;
+        }
+
+        public Vec3 NearestPointToRay(Ray ray)
+        {
+            Vec3 rayOrigin = ray.a;
+            Vec3 rayDirection = ray.b;
+
+            // Initialize minDistance with a large value and the closest point to rayOrigin
+            float minDistance = float.MaxValue;
+            Vec3 closestPoint = new Vec3();
+
+            // Iterate over each face of the AABB
+            for (int axis = 0; axis < 3; axis++)
+            {
+                for (int bound = 0; bound < 2; bound++)
+                {
+                    Vec3 facePoint = new Vec3();
+                    facePoint[axis] = bound == 0 ? min[axis] : max[axis];
+
+                    // Calculate the other coordinates of the facePoint by clamping the rayOrigin to the AABB boundaries
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (i == axis) continue;
+
+                        float value = rayOrigin[i];
+                        float minBound = min[i];
+                        float maxBound = max[i];
+
+                        if (value < minBound)
+                        {
+                            facePoint[i] = minBound;
+                        }
+                        else if (value > maxBound)
+                        {
+                            facePoint[i] = maxBound;
+                        }
+                        else
+                        {
+                            facePoint[i] = value;
+                        }
+                    }
+
+                    // Calculate the distance between the facePoint and the rayOrigin
+                    float distance = (facePoint - rayOrigin).lengthSquared();
+
+                    // Update the closest point if the distance is smaller than the current minDistance
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        closestPoint = facePoint;
+                    }
+                }
+            }
+
+            return closestPoint;
+        }
+
+
     }
 }

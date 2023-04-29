@@ -92,6 +92,11 @@ namespace ExampleProject.Modes
         {
 
         }
+
+        public void OnLateRender(Device obj)
+        {
+
+        }
     }
 
     public struct ParticleUpdate : IParticleSystemUpdate

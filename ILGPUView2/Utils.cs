@@ -427,5 +427,11 @@ namespace GPU
             uint seed = CreateSeed(seed0, counter, seed1, seed2);
             return GetRandom(seed, -v, v);
         }
+
+        public static float Lerp(float a, float b, float t)
+        {
+            return a + (b - a) * t;
+        }
+
     }
 }

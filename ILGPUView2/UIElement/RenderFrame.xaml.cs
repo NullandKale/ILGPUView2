@@ -39,22 +39,13 @@ namespace UIElement
             onResolutionChanged?.Invoke(width, height);
         }
 
-        public void update(byte[] data, string debugLine= "")
+        public void update(ref int[] data)
         {
-            if (data.Length == wBitmap.PixelWidth * wBitmap.PixelHeight * 4)
-            {
-                wBitmap.Lock();
-                IntPtr pBackBuffer = wBitmap.BackBuffer;
-                Marshal.Copy(data, 0, pBackBuffer, data.Length);
-                wBitmap.AddDirtyRect(rect);
-                wBitmap.Unlock();
-
-                if(debugLine != null && debugLine.Length > 0) 
-                {
-                    debugInfo.Content = debugLine;
-                    UIBuilder.OnFPSUpdate(debugLine);
-                }
-            }
+            wBitmap.Lock();
+            IntPtr pBackBuffer = wBitmap.BackBuffer;
+            Marshal.Copy(data, 0, pBackBuffer, data.Length);
+            wBitmap.AddDirtyRect(rect);
+            wBitmap.Unlock();
         }
     }
 }

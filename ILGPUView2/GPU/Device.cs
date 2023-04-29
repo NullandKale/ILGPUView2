@@ -6,6 +6,7 @@ using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPUView2.GPU;
 using ILGPUView2.GPU.DataStructures;
+using ILGPUView2.GPU.Filters;
 using ILGPUView2.GPU.RT;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,9 @@ namespace GPU
         public Accelerator device;
 
         private Dictionary<Type, object> kernels;
+        private Action<Index1D, ArrayView1D<byte, Stride1D.Dense>, dImage> rgbKernel;
+        private Action<Index1D, dImage, ArrayView1D<byte, Stride1D.Dense>> rgbaKernel;
+        private Action<Index1D, dImage, FilterDepth> filterDepth;
 
         public int ticks = 0;
 
@@ -33,20 +37,27 @@ namespace GPU
         
         private Thread renderThread;
         private Action<Device> onRender;
-        
+        private Action<Device> onLateRender;
+
         private Stopwatch timer;
         private Queue<double> frameTimes = new Queue<double>();
         private double frameTimeSum = 0;
-
         public Device(RenderFrame renderFrame)
         {
             bool debug = false;
             this.renderFrame = renderFrame;
 
-            context = Context.Create(builder => builder.CPU().Cuda().AutoAssertions().Math(MathMode.Fast).EnableAlgorithms().Optimize(debug ? OptimizationLevel.Debug : OptimizationLevel.Debug));
-            device = context.GetPreferredDevice(preferCPU: debug)
-                                      .CreateAccelerator(context);
+            context = Context.Create(builder => builder.CPU().Cuda().
+                                                        EnableAlgorithms().
+                                                        Math(MathMode.Fast).
+                                                        Inlining(InliningMode.Aggressive).
+                                                        Optimize(OptimizationLevel.O1));
+            device = context.GetPreferredDevice(preferCPU: debug).CreateAccelerator(context);
             kernels = new Dictionary<Type, object>();
+
+            rgbKernel = device.LoadAutoGroupedStreamKernel<Index1D, ArrayView1D<byte, Stride1D.Dense>, dImage>(ImageToRGB);
+            rgbaKernel = device.LoadAutoGroupedStreamKernel<Index1D, dImage, ArrayView1D<byte, Stride1D.Dense>>(RGBToImage);
+            filterDepth = device.LoadAutoGroupedStreamKernel<Index1D, dImage, FilterDepth>(FilteredDepthKernel);
 
             renderFrame.onResolutionChanged = (width, height) =>
             {
@@ -59,9 +70,11 @@ namespace GPU
             };
         }
 
-        public void Start(Action<Device> onRender)
+        public void Start(Action<Device> onRender, Action<Device> onLateRender)
         {
             this.onRender = onRender;
+            this.onLateRender = onLateRender;
+
             if (renderThread != null)
             {
                 throw new InvalidOperationException("Render thread is already running.");
@@ -71,7 +84,8 @@ namespace GPU
             renderThread = new Thread(Render)
             {
                 IsBackground = true,
-                Name = "Render Thread"
+                Name = "Render Thread",
+                Priority = ThreadPriority.Highest
             };
             renderThread.Start();
         }
@@ -101,6 +115,8 @@ namespace GPU
         {
             timer = new Stopwatch();
 
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
+
             while (isRunning)
             {
                 timer.Restart();
@@ -114,29 +130,23 @@ namespace GPU
                     onRender(this);
                     device.Synchronize();
 
-                    framebuffer.toCPU();
+                    var frameData = framebuffer.toCPU();
 
                     Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        try
-                        {
-                            renderFrame.update(framebuffer.toCPU(), GetTimerString());
-                        }
-                        catch (Exception e)
-                        {
-                            Trace.WriteLine(e.ToString());
-                        }
-
+                        Application.Current.MainWindow.Title = GetTimerString();
+                        renderFrame.update(ref frameData);
                         isDrawing = false;
-                    });
+                    }, System.Windows.Threading.DispatcherPriority.Render);
 
                     while (isDrawing && isRunning)
                     {
                         // wait for isDrawing to be false or shutdown signal
+                        Thread.SpinWait(10);
                     }
-                }
 
-                //Thread.Sleep(15);
+                    onLateRender(this);
+                }
 
                 UpdateTimer();
             }
@@ -218,16 +228,39 @@ namespace GPU
             kernel(output.width * output.height, ticks, output.toDevice(this), input.toDevice(this), filter);
         }
 
+        public void ExecuteDepthFilter(GPUImage output, FilterDepth filter)
+        {
+            filterDepth(output.width * output.height, output.toDevice(this), filter);
+        }
+
+        public void ExecuteTexturedMask<TFunc>(GPUImage output, GPUImage mask, GPUImage texture, TFunc filter = default) where TFunc : unmanaged, ITexturedMask
+        {
+            var kernel = GetTexturedMaskKernel(filter);
+            kernel(output.width * output.height, ticks, output.toDevice(this), mask.toDevice(this), texture.toDevice(this), filter);
+        }
+
+        public void CopyToRGB(MemoryBuffer1D<byte, Stride1D.Dense> output, GPUImage input)
+        {
+            rgbKernel(input.width * input.height, output, input.toDevice(this));
+            device.Synchronize();
+        }
+
+        public void RGBtoRGBA(GPUImage output, MemoryBuffer1D<byte, Stride1D.Dense> input)
+        {
+            rgbaKernel(output.width * output.height, output.toDevice(this), input);
+            device.Synchronize();
+        }
+
         public void ExecuteFramebufferMask<TFunc>(GPUImage output, FrameBuffer input, TFunc filter = default) where TFunc : unmanaged, IFramebufferMask
         {
             var kernel = GetFramebufferMaskKernel(filter);
             kernel(output.width * output.height, ticks, output.toDevice(this), input, filter);
         }
 
-        public void ExecuteVoxelFramebufferMask<TFunc>(Voxels voxels, FrameBuffer input, TFunc filter = default) where TFunc : unmanaged, IVoxelFramebufferFilter
+        public void ExecuteVoxelFramebufferMask<TFunc>(Voxels voxels, GPUImage depth, GPUImage color, TFunc filter = default) where TFunc : unmanaged, IVoxelMask
         {
             var kernel = GetVoxelFramebufferFilterKernel(filter);
-            kernel(new Index2D(voxels.xSize, voxels.ySize), ticks, voxels.toDevice(), input, filter);
+            kernel(new Index2D(voxels.xSize, voxels.ySize), ticks, voxels.toDevice(), depth.toDevice(this), color.toDevice(this), filter);
         }
 
         public void ExecuteVoxelFilter<TFunc>(GPUImage output, Voxels voxels, TFunc filter = default) where TFunc : unmanaged, IVoxelFilter
@@ -335,6 +368,17 @@ namespace GPU
             return (Action<Index1D, int, dImage, dImage, TFunc>)kernels[filter.GetType()];
         }
 
+        private Action<Index1D, int, dImage, dImage, dImage, TFunc> GetTexturedMaskKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITexturedMask
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                Action<Index1D, int, dImage, dImage, dImage, TFunc> kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, dImage, dImage, TFunc>(TexturedMaskKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dImage, dImage, dImage, TFunc>)kernels[filter.GetType()];
+        }
+
         private Action<Index1D, int, dImage, FrameBuffer, TFunc> GetFramebufferMaskKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IFramebufferMask
         {
             if (!kernels.ContainsKey(filter.GetType()))
@@ -346,15 +390,15 @@ namespace GPU
             return (Action<Index1D, int, dImage, FrameBuffer, TFunc>)kernels[filter.GetType()];
         }
 
-        private Action<Index2D, int, dVoxels, FrameBuffer, TFunc> GetVoxelFramebufferFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVoxelFramebufferFilter
+        private Action<Index2D, int, dVoxels, dImage, dImage, TFunc> GetVoxelFramebufferFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVoxelMask
         {
             if (!kernels.ContainsKey(filter.GetType()))
             {
-                Action<Index2D, int, dVoxels, FrameBuffer, TFunc> kernel = device.LoadAutoGroupedStreamKernel<Index2D, int, dVoxels, FrameBuffer, TFunc>(VoxelFramebufferFilterKernel);
+                Action<Index2D, int, dVoxels, dImage, dImage, TFunc> kernel = device.LoadAutoGroupedStreamKernel<Index2D, int, dVoxels, dImage, dImage, TFunc>(VoxelFramebufferFilterKernel);
                 kernels.Add(filter.GetType(), kernel);
             }
 
-            return (Action<Index2D, int, dVoxels, FrameBuffer, TFunc>)kernels[filter.GetType()];
+            return (Action<Index2D, int, dVoxels, dImage, dImage, TFunc>)kernels[filter.GetType()];
         }
 
         private Action<Index1D, int, dVoxels, dImage, TFunc> GetVoxelFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVoxelFilter

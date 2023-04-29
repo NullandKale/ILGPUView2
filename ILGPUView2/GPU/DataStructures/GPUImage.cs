@@ -14,25 +14,27 @@ namespace GPU
         public int height;
         
         public bool dirty = false;
+        public bool cpu_dirty = false;
 
-        public byte[] data;
+        public int[] data;
 
-        public MemoryBuffer1D<byte, Stride1D.Dense>? gpuData;
+        public MemoryBuffer1D<int, Stride1D.Dense>? gpuData;
 
         public GPUImage(int width, int height)
         {
             this.width = width;
             this.height = height;
 
-            data = new byte[width * height * 4];
+            data = new int[width * height];
         }
 
         public GPUImage(Bitmap b)
         {
             this.width = b.Width;
             this.height = b.Height;
-
-            data = Utils.BitmapToBytes(b);
+            byte[] data_bytes = Utils.BitmapToBytes(b);
+            data = new int[width * height];
+            Buffer.BlockCopy(data_bytes, 0, data, 0, data_bytes.Length);
         }
 
         public static bool TryLoad(string file, out GPUImage image)
@@ -71,21 +73,27 @@ namespace GPU
                 }
                 else
                 {
-                    gpuData = gpu.device.Allocate1D<byte>(width * height * 4);
+                    gpuData = gpu.device.Allocate1D<int>(width * height);
                 }
+            }
+
+            if(cpu_dirty)
+            {
+                gpuData.CopyFromCPU(data);
+                cpu_dirty = false;
             }
 
             dirty = true;
             return new dImage(width, height, gpuData);
         }
 
-        public byte[] toCPU()
+        public ref int[] toCPU()
         {
             if(gpuData != null) 
             {
                 if(data == null || data.Length != gpuData.Length)
                 {
-                    data = new byte[gpuData.Length];
+                    data = new int[gpuData.Length];
                     dirty = true;
                 }
 
@@ -96,12 +104,14 @@ namespace GPU
                 }
             }
 
-            return data;
+            return ref data;
         }
 
         public Bitmap GetBitmap()
         {
-            return Utils.BitmapFromBytes(data, width, height);
+            byte[] data_bytes = new byte[width * height * 4];
+            Buffer.BlockCopy(data, 0, data_bytes, 0, data_bytes.Length);
+            return Utils.BitmapFromBytes(data_bytes, width, height);
         }
 
         public void Dispose()
@@ -115,9 +125,9 @@ namespace GPU
         public int width;
         public int height;
 
-        public ArrayView1D<byte, Stride1D.Dense> data;
+        public ArrayView1D<int, Stride1D.Dense> data;
 
-        public dImage(int width, int height, MemoryBuffer1D<byte, Stride1D.Dense> data)
+        public dImage(int width, int height, MemoryBuffer1D<int, Stride1D.Dense> data)
         {
             this.width = width;
             this.height = height;
@@ -128,71 +138,31 @@ namespace GPU
         {
             if (x < 0 || x >= width || y < 0 || y >= height)
             {
-                return default;
+                return new RGBA32();
             }
 
-            int index = (y * width + x) * 4;
-            byte r = data[index + 0];
-            byte g = data[index + 1];
-            byte b = data[index + 2];
-            byte a = data[index + 3];
-
-            return new RGBA32(r, g, b, a);
+            int index = (y * width + x);
+            return new RGBA32(data[index]);
         }
 
-        public void SetColorAt(int x, int y, byte r, byte g, byte b, byte a)
+        public void SetColorAt(int x, int y, int color)
         {
             if (x < 0 || x >= width || y < 0 || y >= height)
             {
                 return;
             }
 
-            int index = (y * width + x) * 4;
-            data[index + 0] = r;
-            data[index + 1] = g;
-            data[index + 2] = b;
-            data[index + 3] = a;
-        }
-
-        public void AddColorAt(int x, int y, Vec3 color, float depth)
-        {
-            if (x < 0 || x >= width || y < 0 || y >= height)
-            {
-                return;
-            }
-
-            int index = (y * width + x) * 4;
-
-            byte a = data[index + 3];
-
-            byte depthValue = (byte)(depth * 255.0f);
-
-            if (depthValue < a)
-            {
-                byte r = (byte)XMath.Clamp(color.x * 255.0f, 0, 255);
-                byte g = (byte)XMath.Clamp(color.y * 255.0f, 0, 255);
-                byte b = (byte)XMath.Clamp(color.z * 255.0f, 0, 255);
-                a = depthValue;
-
-                data[index + 0] = r;
-                data[index + 1] = g;
-                data[index + 2] = b;
-                data[index + 3] = a;
-            }
+            int index = (y * width + x);
+            data[index] = color;
         }
 
         public void SetColorAt(int x, int y, RGBA32 color)
         {
-            SetColorAt(x, y, color.r, color.g, color.b, color.a);
+            SetColorAt(x, y, color.ToInt());
         }
 
         public RGBA32 GetColorAt(float x, float y)
         {
-            if (x < 0.0f || x >= 1.0f || y < 0.0f || y >= 1.0f)
-            {
-                return default;
-            }
-
             int x_idx = (int)(x * width);
             int y_idx = (int)(y * height);
 
@@ -201,33 +171,10 @@ namespace GPU
 
         public Vec3 GetPixel(float x, float y)
         {
-            if (x < 0.0f || x >= 1.0f || y < 0.0f || y >= 1.0f)
-            {
-                return default;
-            }
-
             int x_idx = (int)(x * width);
             int y_idx = (int)(y * height);
 
             return new Vec3(GetColorAt(x_idx, y_idx));
-        }
-
-        public void SetColorAt(float x, float y, byte r, byte g, byte b, byte a)
-        {
-            if (x < 0.0f || x >= 1.0f || y < 0.0f || y >= 1.0f)
-            {
-                return;
-            }
-
-            int x_idx = (int)(x * width);
-            int y_idx = (int)(y * height);
-
-            SetColorAt(x_idx, y_idx, r, g, b, a);
-        }
-
-        public void SetColorAt(float x, float y, RGBA32 color)
-        {
-            SetColorAt(x, y, color.r, color.g, color.b, color.a);
         }
     }
 }

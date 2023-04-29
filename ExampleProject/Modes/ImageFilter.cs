@@ -120,5 +120,10 @@ namespace ExampleProject.Modes
         {
 
         }
+
+        public void OnLateRender(GPU.Device obj)
+        {
+
+        }
     }
 }

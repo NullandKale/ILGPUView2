@@ -26,6 +26,11 @@ namespace ExampleProject.Modes
 
         }
 
+        public void OnLateRender(Device obj)
+        {
+
+        }
+
         public void OnRender(Device gpu)
         {
             gpu.ExecuteFilter(gpu.framebuffer, filter);

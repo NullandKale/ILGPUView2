@@ -47,8 +47,7 @@ namespace ILGPUView2.GPU.Filters
                         if (distSquared <= radius * radius)
                         {
                             //                      
-                            output.AddColorAt(x, y, particles.colors[particleID], (pos.z + worldScale) / (2f * worldScale));
-                            //output.SetColorAt(x, y, color);
+                            output.SetColorAt(x, y, color);
                         }
                     }
                 }

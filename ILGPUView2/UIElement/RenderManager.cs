@@ -1,6 +1,7 @@
 ﻿using GPU;
 using System;
 using System.Collections.Generic;
+using System.Windows;
 
 namespace UIElement
 {
@@ -35,9 +36,16 @@ namespace UIElement
                     renderWindow.Close();
                 }
 
-                renderWindow = new RenderWindow();
+                //Application.Current.MainWindow.Hide();
+
+                renderWindow = new RenderWindow(newRenderMode);
+                renderWindow.Closed += (object? sender, EventArgs e) =>
+                {
+                    Application.Current.MainWindow.Close();
+                };
+
                 renderWindow.Show();
-                renderWindow.TryStart(newRenderMode);
+                renderWindow.TryStart();
             }
         }
 

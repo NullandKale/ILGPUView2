@@ -123,6 +123,13 @@ namespace GPU
             z = color.b / 255f;
         }
 
+        public Vec3(float v)
+        {
+            this.x = v;
+            this.y = v;
+            this.z = v;
+        }
+
         public Vec3(float x, float y, float z)
         {
             this.x = x;
@@ -367,6 +374,11 @@ namespace GPU
             return v / XMath.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
         }
 
+        public Vec3 Normalize()
+        {
+            return unitVector(this);
+        }
+
 
         public static Vec3 reflect(Vec3 normal, Vec3 incomming)
         {
@@ -491,6 +503,91 @@ namespace GPU
             float y = XMath.Clamp(value.y, min.y, max.y);
             float z = XMath.Clamp(value.z, min.z, max.z);
             return new Vec3(x, y, z);
+        }
+
+        public static Vec3 Pow(Vec3 color, float power)
+        {
+            return new Vec3(
+                XMath.Pow(color.x, power),
+                XMath.Pow(color.y, power),
+                XMath.Pow(color.z, power)
+            );
+        }
+
+        public static Vec3 Log(Vec3 color, float base_value)
+        {
+            return new Vec3(
+                XMath.Log(color.x, base_value),
+                XMath.Log(color.y, base_value),
+                XMath.Log(color.z, base_value)
+            );
+        }
+
+        public static Vec3 Sqrt(Vec3 vec3)
+        {
+            return new Vec3(
+                XMath.Sqrt(vec3.x),
+                XMath.Sqrt(vec3.y),
+                XMath.Sqrt(vec3.z)
+            );
+        }
+
+        public static Vec3 Exp(Vec3 vec3)
+        {
+            return new Vec3(
+                XMath.Exp(vec3.x),
+                XMath.Exp(vec3.y),
+                XMath.Exp(vec3.z)
+            );
+        }
+
+        public static Vec3 Min(Vec3 a, Vec3 b)
+        {
+            return new Vec3(
+                XMath.Min(a.x, b.x),
+                XMath.Min(a.y, b.y),
+                XMath.Min(a.z, b.z)
+            );
+        }
+
+        public static Vec3 Max(Vec3 a, Vec3 b)
+        {
+            return new Vec3(
+                XMath.Max(a.x, b.x),
+                XMath.Max(a.y, b.y),
+                XMath.Max(a.z, b.z)
+            );
+        }
+
+        public static Vec3 Min(Vec3 a)
+        {
+            return new Vec3(XMath.Min(a.x, XMath.Min(a.y, a.z)) );
+        }
+
+        public static Vec3 Max(Vec3 a)
+        {
+            return new Vec3(XMath.Max(a.x, XMath.Max(a.y, a.z))
+            );
+        }
+
+        public static object Abs(Vec3 viewLerp)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static Vec3 Ceiling(object v)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static Vec3 Clamp(Vec3 modViewLerp, float v1, float v2)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static float Mod(Vec3 vec3, int v)
+        {
+            throw new NotImplementedException();
         }
 
         public static implicit operator Vector3(Vec3 d)

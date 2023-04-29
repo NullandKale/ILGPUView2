@@ -134,6 +134,11 @@ namespace ExampleProject.Modes
         {
             this.mode = mode;
         }
+
+        public void OnLateRender(Device obj)
+        {
+
+        }
     }
 
     public struct FractalRenderer : IImageFilter
