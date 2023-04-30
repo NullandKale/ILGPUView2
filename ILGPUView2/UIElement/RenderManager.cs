@@ -39,10 +39,6 @@ namespace UIElement
                 //Application.Current.MainWindow.Hide();
 
                 renderWindow = new RenderWindow(newRenderMode);
-                renderWindow.Closed += (object? sender, EventArgs e) =>
-                {
-                    Application.Current.MainWindow.Close();
-                };
 
                 renderWindow.Show();
                 renderWindow.TryStart();

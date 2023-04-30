@@ -92,23 +92,7 @@ namespace GPU
 
         public void Dispose()
         {
-            Stop();
-
-            framebuffer.Dispose();
-            device.Dispose();
-            context.Dispose();
-        }
-
-        public void Stop()
-        {
-            if (renderThread == null)
-            {
-                throw new InvalidOperationException("Render thread is not running.");
-            }
-
             isRunning = false;
-            renderThread.Join();
-            renderThread = null;
         }
 
         public void Render()
@@ -132,24 +116,25 @@ namespace GPU
 
                     var frameData = framebuffer.toCPU();
 
-                    Application.Current.Dispatcher.InvokeAsync(() =>
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Application.Current.MainWindow.Title = GetTimerString();
-                        renderFrame.update(ref frameData);
-                        isDrawing = false;
+                        if(isRunning)
+                        {
+                            Application.Current.MainWindow.Title = GetTimerString();
+                            renderFrame.update(ref frameData);
+                            isDrawing = false;
+                        }
                     }, System.Windows.Threading.DispatcherPriority.Render);
-
-                    while (isDrawing && isRunning)
-                    {
-                        // wait for isDrawing to be false or shutdown signal
-                        Thread.SpinWait(10);
-                    }
 
                     onLateRender(this);
                 }
 
                 UpdateTimer();
             }
+
+            framebuffer.Dispose();
+            device.Dispose();
+            context.Dispose();
         }
 
         private void UpdateTimer()
