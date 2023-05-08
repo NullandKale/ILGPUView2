@@ -15,6 +15,7 @@ namespace UIElement
         public WriteableBitmap wBitmap;
         public Int32Rect rect;
 
+        public Func<RenderWindow, int, int, (int xSize, int ySize, bool update)> BeforeResolutionChanged;
         public Action<int, int> onResolutionChanged;
 
         public RenderFrame()
@@ -28,6 +29,21 @@ namespace UIElement
         {
             width = (int)e.NewSize.Width;
             height = (int)e.NewSize.Height;
+
+            if (BeforeResolutionChanged != null)
+            {
+                var parentWindow = Window.GetWindow(this);
+                if (parentWindow != null)
+                {
+                    var size = BeforeResolutionChanged.Invoke(parentWindow as RenderWindow, width, height);
+                    if (size.update)
+                    {
+                        width = size.xSize;
+                        height = size.ySize;
+                    }
+                }
+            }
+
             UpdateResolution();
         }
 

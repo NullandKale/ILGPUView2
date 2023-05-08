@@ -20,6 +20,7 @@ namespace UIElement
             InitializeComponent();
 
             this.callback = callback;
+            renderFrame.BeforeResolutionChanged = callback.BeforeResolutionChanged;
 
             gpu = new Device(renderFrame);
 
@@ -100,7 +101,8 @@ namespace UIElement
         public void OnRender(Device gpu);
         public void OnKeyPressed(Key key, ModifierKeys modifiers);
         public void OnStop();
-        void OnLateRender(Device obj);
+        public void OnLateRender(Device obj);
+        public (int xSize, int ySize, bool update) BeforeResolutionChanged(RenderWindow renderWindow, int newWidth, int newHeight);
     }
 
 }
