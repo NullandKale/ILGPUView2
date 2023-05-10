@@ -100,6 +100,10 @@ namespace GPU
             return XMath.Sqrt(dx * dx + dy * dy);
         }
 
+        public float length()
+        {
+            return XMath.Sqrt(x * x + y * y);
+        }
     }
 
 
@@ -561,33 +565,36 @@ namespace GPU
 
         public static Vec3 Min(Vec3 a)
         {
-            return new Vec3(XMath.Min(a.x, XMath.Min(a.y, a.z)) );
+            return new Vec3(XMath.Min(a.x, XMath.Min(a.y, a.z)));
         }
 
         public static Vec3 Max(Vec3 a)
         {
-            return new Vec3(XMath.Max(a.x, XMath.Max(a.y, a.z))
-            );
+            return new Vec3(XMath.Max(a.x, XMath.Max(a.y, a.z)));
         }
 
-        public static object Abs(Vec3 viewLerp)
+        public static Vec3 Abs(Vec3 viewLerp)
         {
-            throw new NotImplementedException();
+            return new Vec3(XMath.Abs(viewLerp.x), XMath.Abs(viewLerp.y), XMath.Abs(viewLerp.z));
         }
 
-        public static Vec3 Ceiling(object v)
+        public static Vec3 Ceiling(Vec3 v)
         {
-            throw new NotImplementedException();
+            return new Vec3(XMath.Ceiling(v.x), XMath.Ceiling(v.y), XMath.Ceiling(v.z));
         }
 
         public static Vec3 Clamp(Vec3 modViewLerp, float v1, float v2)
         {
-            throw new NotImplementedException();
+            return new Vec3(
+                XMath.Clamp(modViewLerp.x, v1, v2),
+                XMath.Clamp(modViewLerp.y, v1, v2),
+                XMath.Clamp(modViewLerp.z, v1, v2)
+            );
         }
 
-        public static float Mod(Vec3 vec3, int v)
+        public static float Mod(Vec3 vec3, float v)
         {
-            throw new NotImplementedException();
+            return vec3.x % v + vec3.y % v + vec3.z % v;
         }
 
         public static implicit operator Vector3(Vec3 d)
