@@ -8,6 +8,45 @@ using System.Linq;
 
 namespace GPU
 {
+    public struct XorShift128PlusState
+    {
+        public ulong s0;
+        public ulong s1;
+
+        public XorShift128PlusState(ulong seed1, ulong seed2)
+        {
+            s0 = seed1;
+            s1 = seed2;
+        }
+
+        public XorShift128PlusState(float u, float v, int tick)
+        {
+            // Ensure that the seed values will not be all zeros.
+            // We add 1 to avoid a zero state in case u, v or tick is zero.
+            s0 = ((ulong)(u * uint.MaxValue) + 1) ^ ((ulong)tick << 32);
+            s1 = ((ulong)(v * uint.MaxValue) + 1) ^ ((ulong)tick << 32);
+        }
+
+        public float NextFloat()
+        {
+            ulong s1 = this.s0;
+            ulong s0 = this.s1;
+            this.s0 = s0;
+            s1 ^= s1 << 23;
+            this.s1 = s1 ^ s0 ^ (s1 >> 17) ^ (s0 >> 26);
+            return ((s1 + s0) >> 12) / 4294967296.0f;
+        }
+
+        public static Vec3 RandomUnitVector(ref XorShift128PlusState rngState)
+        {
+            float theta = 2 * (float)Math.PI * rngState.NextFloat();
+            float z = 1 - 2 * rngState.NextFloat();
+            float r = XMath.Sqrt(1 - z * z);
+            return new Vec3(r * XMath.Cos(theta), r * XMath.Sin(theta), z);
+        }
+    }
+
+
     // ChatGPT wrote this, its VERY slow
     public struct NoiseGenerator
     {
