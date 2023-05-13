@@ -384,11 +384,10 @@ namespace GPU
         }
 
 
-        public static Vec3 reflect(Vec3 normal, Vec3 incomming)
+        public static Vec3 reflect(Vec3 incomming, Vec3 normal)
         {
-            return unitVector(incomming - normal * 2f * dot(incomming, normal));
+            return incomming - normal * 2f * dot(incomming, normal);
         }
-
 
         public static Vec3 refract(Vec3 v, Vec3 n, float niOverNt)
         {
@@ -595,6 +594,14 @@ namespace GPU
         public static float Mod(Vec3 vec3, float v)
         {
             return vec3.x % v + vec3.y % v + vec3.z % v;
+        }
+
+        public bool NearZero()
+        {
+            const float epsilon = 0.0001f; // Define a small threshold for comparison
+
+            // Check if each component of the vector is close to zero
+            return XMath.Abs(x) < epsilon && XMath.Abs(y) < epsilon && XMath.Abs(z) < epsilon;
         }
 
         public static implicit operator Vector3(Vec3 d)

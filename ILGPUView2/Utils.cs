@@ -19,31 +19,80 @@ namespace GPU
             s1 = seed2;
         }
 
-        public XorShift128PlusState(float u, float v, int tick)
+        // seed is a well generated random number that is the same for each pixel in the image, 
+        // u and v and the uv coord in screen space
+        // width and height are the screen size
+        // tick is the frame counter
+        public XorShift128PlusState(double seed, float u, float v, int width, int height, ulong tick)
         {
-            // Ensure that the seed values will not be all zeros.
-            // We add 1 to avoid a zero state in case u, v or tick is zero.
-            s0 = ((ulong)(u * uint.MaxValue) + 1) ^ ((ulong)tick << 32);
-            s1 = ((ulong)(v * uint.MaxValue) + 1) ^ ((ulong)tick << 32);
+            // Combine the seed with the pixel coordinates and the tick count in a more complex way.
+            // Adding 1 to avoid a zero state in case u, v or tick is zero.
+            s0 = (ulong)((seed * 6364136223846793005ul + u * 1442695040888963407ul + tick * 72057594037927936ul) % ulong.MaxValue) + 1;
+            s1 = (ulong)((seed * 1442695040888963407ul + v * 72057594037927936ul + tick * 6364136223846793005ul) % ulong.MaxValue) + 1;
+
+            // Bitwise XOR to mix the bits up
+            s0 ^= s0 << 23;
+            s1 ^= s1 << 23;
         }
 
-        public float NextFloat()
+
+        private static ulong RotL(ulong x, int k)
         {
-            ulong s1 = this.s0;
-            ulong s0 = this.s1;
-            this.s0 = s0;
-            s1 ^= s1 << 23;
-            this.s1 = s1 ^ s0 ^ (s1 >> 17) ^ (s0 >> 26);
-            return ((s1 + s0) >> 12) / 4294967296.0f;
+            return (x << k) | (x >> (64 - k));
         }
+
+
+        public static float NextFloat(ref XorShift128PlusState rng)
+        {
+            ulong s0 = rng.s0;
+            ulong s1 = rng.s1;
+            ulong result = s0 + s1;
+
+            s1 ^= s0;
+            rng.s0 = RotL(s0, 24) ^ s1 ^ (s1 << 16); // a, b
+            rng.s1 = RotL(s1, 37); // c
+
+            return ((float)(result >> 12) / 4294967296.0f) % 1.0f;
+        }
+
 
         public static Vec3 RandomUnitVector(ref XorShift128PlusState rngState)
         {
-            float theta = 2 * (float)Math.PI * rngState.NextFloat();
-            float z = 1 - 2 * rngState.NextFloat();
+            float theta = 2 * (float)Math.PI * NextFloat(ref rngState);
+            float z = 1 - 2 * NextFloat(ref rngState);
             float r = XMath.Sqrt(1 - z * z);
             return new Vec3(r * XMath.Cos(theta), r * XMath.Sin(theta), z);
         }
+
+        public static Vec3 RandomHemisphereVector(ref XorShift128PlusState rng, Vec3 normal)
+        {
+            Vec3 randomUnitVector = RandomUnitVector(ref rng);
+
+            // Ensure that the random vector is in the same hemisphere as the normal
+            if (Vec3.dot(randomUnitVector, normal) < 0)
+            {
+                randomUnitVector = -randomUnitVector;
+            }
+
+            return randomUnitVector;
+        }
+
+        public static Vec3 RandomInUnitSphere(ref XorShift128PlusState rng)
+        {
+            Vec3 p;
+            for (int i = 0; i < 100; i++)
+            {
+                p = 2.0f * new Vec3(NextFloat(ref rng), NextFloat(ref rng), NextFloat(ref rng)) - new Vec3(1, 1, 1);
+                if (p.lengthSquared() < 1.0)
+                {
+                    return p;
+                }
+            }
+            // In the unlikely event that we don't find a point in the unit sphere within 100 tries, 
+            // return a default vector (this could be adjusted based on your needs)
+            return new Vec3(0, 0, 0);
+        }
+
     }
 
 
