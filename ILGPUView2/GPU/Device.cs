@@ -224,6 +224,13 @@ namespace GPU
             kernel(output.width * output.height, ticks, output.toDevice(this), mask.toDevice(this), texture.toDevice(this), filter);
         }
 
+        public void Execute3TextureMask<TFunc>(GPUImage output, GPUImage mask, GPUImage texture0, GPUImage texture1, TFunc filter = default) where TFunc : unmanaged, I3TextureMask
+        {
+            var kernel = Get3TextureMaskKernel(filter);
+            kernel(output.width * output.height, ticks, output.toDevice(this), mask.toDevice(this), texture0.toDevice(this), texture1.toDevice(this), filter);
+        }
+
+
         public void CopyToRGB(MemoryBuffer1D<byte, Stride1D.Dense> output, GPUImage input)
         {
             rgbKernel(input.width * input.height, output, input.toDevice(this));
@@ -362,6 +369,17 @@ namespace GPU
             }
 
             return (Action<Index1D, int, dImage, dImage, dImage, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, int, dImage, dImage, dImage, dImage, TFunc> Get3TextureMaskKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, I3TextureMask
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                Action<Index1D, int, dImage, dImage, dImage, dImage, TFunc > kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, dImage, dImage, dImage, TFunc>(ThreeTextureMaskKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dImage, dImage, dImage, dImage, TFunc >)kernels[filter.GetType()];
         }
 
         private Action<Index1D, int, dImage, FrameBuffer, TFunc> GetFramebufferMaskKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IFramebufferMask

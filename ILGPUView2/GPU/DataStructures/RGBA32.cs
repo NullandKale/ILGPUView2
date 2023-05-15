@@ -77,5 +77,16 @@ namespace GPU
         {
             return new Vec3(r / 255f, g / 255f, b / 255f);
         }
+
+        public static RGBA32 Lerp(RGBA32 a, RGBA32 b, float t)
+        {
+            return new RGBA32(
+                (byte)(a.r + t * (b.r - a.r)),
+                (byte)(a.g + t * (b.g - a.g)),
+                (byte)(a.b + t * (b.b - a.b)),
+                (byte)(a.a + t * (b.a - a.a))
+            );
+        }
+
     }
 }

@@ -172,6 +172,11 @@ namespace GPU
             return XMath.Sqrt(x * x + y * y + z * z);
         }
 
+        public float average()
+        {
+            return (x + y + z) / 3.0f;
+        }
+
 
         public float lengthSquared()
         {
