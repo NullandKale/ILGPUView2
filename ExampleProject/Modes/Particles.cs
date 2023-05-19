@@ -97,6 +97,11 @@ namespace ExampleProject.Modes
         {
 
         }
+
+        public (int xSize, int ySize, bool update) BeforeResolutionChanged(RenderWindow renderWindow, int newWidth, int newHeight)
+        {
+            return (newWidth, newHeight, false);
+        }
     }
 
     public struct ParticleUpdate : IParticleSystemUpdate
