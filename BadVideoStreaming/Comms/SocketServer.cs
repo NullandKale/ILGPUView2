@@ -1,6 +1,11 @@
 ﻿using System.Net.Sockets;
 using System.Net;
 using System.Text;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Reflection.Metadata;
+using System.Reflection;
+using System.Threading;
+using System;
 
 namespace BadVideoStreaming.Comms
 {
@@ -12,7 +17,18 @@ namespace BadVideoStreaming.Comms
         public SocketServer(string address, Action onConnected) : base(address, onConnected)
         {
             var splitAddress = address.Split(':');
-            server = new TcpListener(IPAddress.Parse(splitAddress[0]), int.Parse(splitAddress[1]));
+            server = new TcpListener(IPAddress.Any, int.Parse(splitAddress[1]));
+
+
+            // System.Net.Sockets.SocketException
+              //          HResult = 0x80004005
+              //Message = The requested address is not valid in its context.
+              //Source = System.Net.Sockets
+              //StackTrace:
+              //          at System.Net.Sockets.Socket.UpdateStatusAfterSocketErrorAndThrowException(SocketError error, Boolean disconnectOnFailure, String callerName)
+              // at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+              // at System.Net.Sockets.Socket.Bind(EndPoint localEP)
+              // at System.Net.Sockets.TcpListener.Start(Int32 backlog)
             server.Start();
 
             listenThread = new Thread(new ThreadStart(ListenForClients));
