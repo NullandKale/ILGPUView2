@@ -9,11 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BadVideoStreaming\BadVideoStreaming.csproj" />
     <ProjectReference Include="..\ILGPUView2\ILGPUView2.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="TestImages\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
   <ItemGroup>

@@ -28,6 +28,15 @@ namespace GPU
             data = new int[width * height];
         }
 
+        public GPUImage(int width, int height, byte[] data)
+        {
+            this.width = width;
+            this.height = height;
+
+            this.data = new int[width * height];
+            Buffer.BlockCopy(data, 0, this.data, 0, data.Length);
+        }
+
         public GPUImage(Bitmap b)
         {
             this.width = b.Width;

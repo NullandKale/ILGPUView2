@@ -26,7 +26,7 @@ namespace ExampleProject
             AddRenderModes();
         }
 
-        public void AddRenderModes(int default_mode = 6)
+        public void AddRenderModes(int default_mode = 7)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
             renderManager.AddRenderCallback(1, new DrawCircles());
@@ -35,15 +35,18 @@ namespace ExampleProject
             renderManager.AddRenderCallback(4, new Particles());
             renderManager.AddRenderCallback(5, new ImageFilter());
             renderManager.AddRenderCallback(6, new DebugRT());
+            renderManager.AddRenderCallback(7, new VideoStreamingMode());
 
-            mode.ItemsSource = new string[] { 
+            mode.ItemsSource = new string[] {
                 "Debug",
-                "Draw Circles", 
-                "Game of Life", 
-                "Fractal", 
-                "Particle Sim", 
-                "Image Filter", 
-                "DebugRT" };
+                "Draw Circles",
+                "Game of Life",
+                "Fractal",
+                "Particle Sim",
+                "Image Filter",
+                "DebugRT",
+                "Video Streaming Mode" };
+            
 
             mode.SelectionChanged += (sender, args) =>
             {

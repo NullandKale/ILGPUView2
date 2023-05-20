@@ -3,9 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILGPUView2", "ILGPUView2\ILGPUView2.csproj", "{46CCD510-137E-4A3E-898C-0FE62E5E2537}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ILGPUView2", "ILGPUView2\ILGPUView2.csproj", "{46CCD510-137E-4A3E-898C-0FE62E5E2537}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleProject", "ExampleProject\ExampleProject.csproj", "{C39BF144-C29B-4ABE-A7B3-0B5CC8456FE7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ExampleProject", "ExampleProject\ExampleProject.csproj", "{C39BF144-C29B-4ABE-A7B3-0B5CC8456FE7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BadVideoStreaming", "BadVideoStreaming\BadVideoStreaming.csproj", "{4EFC670F-C27B-4C4F-A209-55B6A63502E2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BA18FCCE-5AEB-4F93-98AA-E377E0DA9801}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsole", "TestConsole\TestConsole.csproj", "{FCE3FA28-A5B9-45B4-9919-70C3CB9F8806}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +30,14 @@ Global
 		{C39BF144-C29B-4ABE-A7B3-0B5CC8456FE7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C39BF144-C29B-4ABE-A7B3-0B5CC8456FE7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C39BF144-C29B-4ABE-A7B3-0B5CC8456FE7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EFC670F-C27B-4C4F-A209-55B6A63502E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EFC670F-C27B-4C4F-A209-55B6A63502E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EFC670F-C27B-4C4F-A209-55B6A63502E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EFC670F-C27B-4C4F-A209-55B6A63502E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCE3FA28-A5B9-45B4-9919-70C3CB9F8806}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCE3FA28-A5B9-45B4-9919-70C3CB9F8806}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCE3FA28-A5B9-45B4-9919-70C3CB9F8806}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCE3FA28-A5B9-45B4-9919-70C3CB9F8806}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
