@@ -126,7 +126,7 @@ namespace BadVideoStreaming
                         string serverReceiveAddress = split[2]; // Address where server receives data from
 
                         // Store the server's receiving address
-                        counterpartReceiveAddress = serverSendAddress;
+                        counterpartReceiveAddress = serverReceiveAddress;
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(serverSendAddress, metaDataConnection, onNewFrame);
@@ -145,7 +145,7 @@ namespace BadVideoStreaming
                         string clientReceiveAddress = split[2];
 
                         // Store the client's receiving address
-                        counterpartReceiveAddress = clientSendAddress;
+                        counterpartReceiveAddress = clientReceiveAddress;
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(clientSendAddress, metaDataConnection, onNewFrame);
