@@ -21,7 +21,7 @@ namespace ExampleProject.Modes
     public class VideoStreamingMode : IRenderCallback
     {
         private string bitmapFolder = "C:\\Users\\alec\\source\\python\\depth_video\\input";
-        private string remoteIp = "127.0.0.1";
+        private string remoteIp = "192.168.0.195";
         private bool isServer = true;
 
         private BiDirectionalStreaming biDirectionalStreaming;
@@ -47,10 +47,10 @@ namespace ExampleProject.Modes
             UIBuilder.AddButton("Connect", () =>
             {
                 string address = remoteIp + ":4010";
-                string udpSendAddress = isServer ? $"{remoteIp}:5000" : $"{remoteIp}:6000";
-                string udpReceiveAddress = isServer ? $"{remoteIp}:5001" : $"{remoteIp}:6001";
+                string localReceiveAddress = isServer ? $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:5001" : $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:6001";
+                string remoteSendAddress = isServer ? $"{remoteIp}:6000" : $"{remoteIp}:5000";
 
-                biDirectionalStreaming = new BiDirectionalStreaming(address, isServer, OnNewFrame, udpSendAddress, udpReceiveAddress);
+                biDirectionalStreaming = new BiDirectionalStreaming(address, isServer, OnNewFrame, localReceiveAddress, remoteSendAddress);
                 biDirectionalStreaming.onConnect.Add(() =>
                 {
                     Thread t = new Thread(() =>

@@ -20,17 +20,17 @@ namespace BadVideoStreaming
         public VideoStreamingOrigin sendingStream;
         public Action<int, int, int, long, byte[]> onNewFrame;
         public List<Action> onConnect;
-        private string udpSendAddress;
-        private string udpReceiveAddress;
+        private string remoteSendAddress;
+        private string localReceiveAddress;
         private string counterpartReceiveAddress;
 
-        public BiDirectionalStreaming(string address, bool isServer, Action<int, int, int, long, byte[]> onNewFrame, string udpSendAddress, string udpReceiveAddress)
+        public BiDirectionalStreaming(string address, bool isServer, Action<int, int, int, long, byte[]> onNewFrame, string localReceiveAddress, string remoteSendAddress)
         {
             this.address = address;
             this.isServer = isServer;
             this.onNewFrame = onNewFrame;
-            this.udpSendAddress = udpSendAddress;
-            this.udpReceiveAddress = udpReceiveAddress;
+            this.localReceiveAddress = localReceiveAddress;
+            this.remoteSendAddress = remoteSendAddress;
             onConnect = new List<Action>();
         }
 
@@ -41,7 +41,7 @@ namespace BadVideoStreaming
                 this.metaDataConnection = new SocketServer(address, () =>
                 {
                     OnConnect();
-                    metaDataConnection.Send(new Message { tag = GetTag(), message = $"init,{udpSendAddress},{udpReceiveAddress}" }); ;
+                    metaDataConnection.Send(new Message { tag = GetTag(), message = $"init,{remoteSendAddress},{localReceiveAddress}" }); ;
                 });
                 metaDataConnection.AddMessageHandler(this);
             }
@@ -130,10 +130,10 @@ namespace BadVideoStreaming
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(serverSendAddress, metaDataConnection, onNewFrame);
-                        this.sendingStream = new VideoStreamingOrigin(udpSendAddress, metaDataConnection);
+                        this.sendingStream = new VideoStreamingOrigin(remoteSendAddress, metaDataConnection);
 
                         // Notify the server about client's address
-                        metaDataConnection.Send(new Message { tag = GetTag(), message = $"ready,{udpSendAddress},{udpReceiveAddress}" });
+                        metaDataConnection.Send(new Message { tag = GetTag(), message = $"ready,{remoteSendAddress},{localReceiveAddress}" });
                     }
                     break;
                 case "ready":
@@ -149,12 +149,13 @@ namespace BadVideoStreaming
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(clientSendAddress, metaDataConnection, onNewFrame);
-                        this.sendingStream = new VideoStreamingOrigin(udpReceiveAddress, metaDataConnection);
+                        this.sendingStream = new VideoStreamingOrigin(localReceiveAddress, metaDataConnection);
                     }
                     break;
                 default: break;
             }
         }
+
     }
 
 }
