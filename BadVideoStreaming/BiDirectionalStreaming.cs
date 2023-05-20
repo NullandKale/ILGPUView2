@@ -125,15 +125,15 @@ namespace BadVideoStreaming
                         string serverSendAddress = split[1]; // Address where server sends data to
                         string serverReceiveAddress = split[2]; // Address where server receives data from
 
-                        // Store the server's receiving address
-                        counterpartReceiveAddress = serverReceiveAddress;
+                        // Store the server's sending address
+                        counterpartReceiveAddress = serverSendAddress;
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(serverSendAddress, metaDataConnection, onNewFrame);
-                        this.sendingStream = new VideoStreamingOrigin(remoteSendAddress, metaDataConnection);
+                        this.sendingStream = new VideoStreamingOrigin(localReceiveAddress, metaDataConnection);
 
                         // Notify the server about client's address
-                        metaDataConnection.Send(new Message { tag = GetTag(), message = $"ready,{remoteSendAddress},{localReceiveAddress}" });
+                        metaDataConnection.Send(new Message { tag = GetTag(), message = $"ready,{localReceiveAddress},{remoteSendAddress}" });
                     }
                     break;
                 case "ready":
@@ -144,17 +144,18 @@ namespace BadVideoStreaming
                         // Address where client receives data from
                         string clientReceiveAddress = split[2];
 
-                        // Store the client's receiving address
-                        counterpartReceiveAddress = clientReceiveAddress;
+                        // Store the client's sending address
+                        counterpartReceiveAddress = clientSendAddress;
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(clientSendAddress, metaDataConnection, onNewFrame);
-                        this.sendingStream = new VideoStreamingOrigin(localReceiveAddress, metaDataConnection);
+                        this.sendingStream = new VideoStreamingOrigin(remoteSendAddress, metaDataConnection);
                     }
                     break;
                 default: break;
             }
         }
+
 
     }
 
