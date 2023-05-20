@@ -47,7 +47,7 @@ namespace ExampleProject.Modes
             UIBuilder.AddButton("Connect", () =>
             {
                 string address = remoteIp + ":4010";
-                string localReceiveAddress = isServer ? $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:5001" : $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:6001";
+                string localReceiveAddress = isServer ? $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:6000" : $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:6001";
                 string remoteSendAddress = isServer ? $"{remoteIp}:6000" : $"{remoteIp}:5000";
 
                 biDirectionalStreaming = new BiDirectionalStreaming(address, isServer, OnNewFrame, localReceiveAddress, remoteSendAddress);
