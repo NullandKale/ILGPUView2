@@ -32,7 +32,12 @@ namespace ExampleProject.Modes
         {
             UIBuilder.Clear();
             UIBuilder.AddLabel("Video Streaming Mode");
+
+            UIBuilder.AddLabel($"Image Set Folder: ");
+            UIBuilder.AddTextBox(bitmapFolder, (newVal) => { bitmapFolder = newVal; });
+
             UIBuilder.AddLabel($"Self IP: {BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}");
+
             UIBuilder.AddLabel("Remote IP");
             UIBuilder.AddTextBox(remoteIp, (newVal) => { remoteIp = newVal; });
 
