@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using System.IO;
 using System;
+using System.Drawing.Imaging;
 
 namespace BadVideoStreaming
 {
@@ -15,15 +16,37 @@ namespace BadVideoStreaming
         public Frame(byte streamid, Bitmap image)
         {
             this.streamid = streamid;
-            this.width = (ushort)image.Width;
-            this.height = (ushort)image.Height;
             this.timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
             // Convert the image to a byte array
+            using Bitmap resizedFrame = new Bitmap(image, new Size((int)(1280 * 0.8f), (int)(720 * 0.8f)));
             using var ms = new MemoryStream();
-            image.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+            var jpgEncoder = GetEncoder(ImageFormat.Jpeg);
+            var myEncoderParameters = new EncoderParameters(1);
+            myEncoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, 50L); // Quality can be adjusted here
+
+            resizedFrame.Save(ms, jpgEncoder, myEncoderParameters);
             this.imageData = new Span<byte>(ms.ToArray());
+
+            this.width = (ushort)resizedFrame.Width;
+            this.height = (ushort)resizedFrame.Height;
         }
+
+        private static ImageCodecInfo GetEncoder(ImageFormat format)
+        {
+            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+
+            foreach (ImageCodecInfo codec in codecs)
+            {
+                if (codec.FormatID == format.Guid)
+                {
+                    return codec;
+                }
+            }
+            return null;
+        }
+
 
         public Frame(byte[] data)
         {

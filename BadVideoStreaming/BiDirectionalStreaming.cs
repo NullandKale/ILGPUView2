@@ -55,9 +55,7 @@ namespace BadVideoStreaming
         {
             if (sendingStream != null && counterpartReceiveAddress != null)
             {
-                // Downscale frame to 1280 * 720
-                using Bitmap resizedFrame = new Bitmap(frame, new Size(1280, 720));
-                sendingStream.SendFrame(new Frame(streamID, resizedFrame), counterpartReceiveAddress);
+                sendingStream.SendFrame(new Frame(streamID, frame), counterpartReceiveAddress);
             }
         }
 
