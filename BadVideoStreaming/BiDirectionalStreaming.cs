@@ -40,7 +40,6 @@ namespace BadVideoStreaming
             {
                 this.metaDataConnection = new SocketServer(address, () =>
                 {
-                    OnConnect();
                     metaDataConnection.Send(new Message { tag = GetTag(), message = $"init,{remoteSendAddress},{localReceiveAddress}" }); ;
                 });
                 metaDataConnection.AddMessageHandler(this);
@@ -150,6 +149,7 @@ namespace BadVideoStreaming
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(remoteSendAddress, metaDataConnection, onNewFrame);
                         this.sendingStream = new VideoStreamingOrigin(counterpartReceiveAddress, metaDataConnection);
+                        OnConnect();
                     }
                     break;
                 default: break;
