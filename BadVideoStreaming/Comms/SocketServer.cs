@@ -19,16 +19,6 @@ namespace BadVideoStreaming.Comms
             var splitAddress = address.Split(':');
             server = new TcpListener(IPAddress.Any, int.Parse(splitAddress[1]));
 
-
-            // System.Net.Sockets.SocketException
-              //          HResult = 0x80004005
-              //Message = The requested address is not valid in its context.
-              //Source = System.Net.Sockets
-              //StackTrace:
-              //          at System.Net.Sockets.Socket.UpdateStatusAfterSocketErrorAndThrowException(SocketError error, Boolean disconnectOnFailure, String callerName)
-              // at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
-              // at System.Net.Sockets.Socket.Bind(EndPoint localEP)
-              // at System.Net.Sockets.TcpListener.Start(Int32 backlog)
             server.Start();
 
             listenThread = new Thread(new ThreadStart(ListenForClients));

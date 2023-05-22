@@ -57,7 +57,8 @@ namespace ExampleProject.Modes
                     {
                         // Get all files in the bitmapFolder directory
                         string[] files = Directory.GetFiles(bitmapFolder);
-
+                        while(true)
+                        {
                         for (int i = 0; i < files.Length; i++)
                         {
                             string? file = files[isServer ? i : (files.Length - 1) - i];
@@ -73,6 +74,7 @@ namespace ExampleProject.Modes
                                 // Wait for 33ms (roughly 30 FPS)
                                 Thread.Sleep(33);
                             }
+                        }
                         }
                     });
                     t.IsBackground = true;
