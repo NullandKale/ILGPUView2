@@ -37,7 +37,9 @@ namespace ExampleProject.Modes
             UIBuilder.AddLabel($"Image Set Folder: ");
             UIBuilder.AddTextBox(bitmapFolder, (newVal) => { bitmapFolder = newVal; });
 
-            UIBuilder.AddLabel($"Self IP: {BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}");
+            localExternalIP = BadVideoStreaming.Comms.Utils.GetLocalIPAddress();
+            UIBuilder.AddLabel($"Self IP");
+            UIBuilder.AddTextBox(localExternalIP, (newVal) => { localExternalIP = newVal; });
 
             UIBuilder.AddLabel("Remote IP");
             UIBuilder.AddTextBox(remoteIP, (newVal) => { remoteIP = newVal; });
