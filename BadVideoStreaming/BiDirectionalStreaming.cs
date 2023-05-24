@@ -20,17 +20,16 @@ namespace BadVideoStreaming
         public VideoStreamingOrigin sendingStream;
         public Action<int, int, int, long, byte[]> onNewFrame;
         public List<Action> onConnect;
-        private string remoteSendAddress;
-        private string localReceiveAddress;
-        private string counterpartReceiveAddress;
+        private string sendAddress;
+        private string receiveAddress;
 
-        public BiDirectionalStreaming(string address, bool isServer, Action<int, int, int, long, byte[]> onNewFrame, string localReceiveAddress, string remoteSendAddress)
+        public BiDirectionalStreaming(string address, bool isServer, Action<int, int, int, long, byte[]> onNewFrame, string receiveAddress, string sendAddress)
         {
             this.address = address;
             this.isServer = isServer;
             this.onNewFrame = onNewFrame;
-            this.localReceiveAddress = localReceiveAddress;
-            this.remoteSendAddress = remoteSendAddress;
+            this.receiveAddress = receiveAddress;
+            this.sendAddress = sendAddress;
             onConnect = new List<Action>();
         }
 
@@ -40,7 +39,7 @@ namespace BadVideoStreaming
             {
                 this.metaDataConnection = new SocketServer(address, () =>
                 {
-                    metaDataConnection.Send(new Message { tag = GetTag(), message = $"init,{remoteSendAddress},{localReceiveAddress}" }); ;
+                    metaDataConnection.Send(new Message { tag = GetTag(), message = $"init,{sendAddress},{receiveAddress}" }); ;
                 });
                 metaDataConnection.AddMessageHandler(this);
             }
@@ -53,16 +52,16 @@ namespace BadVideoStreaming
 
         public void SendFrame(byte streamID, Bitmap frame)
         {
-            if (sendingStream != null && counterpartReceiveAddress != null)
+            if (sendingStream != null)
             {
-                sendingStream.SendFrame(new Frame(streamID, frame), counterpartReceiveAddress);
+                sendingStream.SendFrame(new Frame(streamID, frame), sendAddress);
             }
         }
 
 
         public void SendFrame(byte streamID, int width, int height, int[] rgba32_image_data)
         {
-            if (sendingStream != null && counterpartReceiveAddress != null)
+            if (sendingStream != null)
             {
                 // Create a new Bitmap object with the specified width and height
                 Bitmap frame = new Bitmap(width, height, PixelFormat.Format32bppArgb);
@@ -88,7 +87,7 @@ namespace BadVideoStreaming
                 // Unlock the bits
                 frame.UnlockBits(bmpData);
 
-                sendingStream.SendFrame(new Frame(streamID, frame), counterpartReceiveAddress);
+                sendingStream.SendFrame(new Frame(streamID, frame), sendAddress);
             }
         }
 
@@ -121,19 +120,17 @@ namespace BadVideoStreaming
                 case "init":
                     if (!isServer)
                     {
-                        // begin initializing the udp streams between the client and the server
-                        string serverSendAddress = split[1]; // Address where server sends data to
-                        string serverReceiveAddress = split[2]; // Address where server receives data from
-
-                        // Store the server's receiving address
-                        counterpartReceiveAddress = remoteSendAddress;
+                        // Address where server sends data to
+                        string serverSendAddress = split[1];
+                        // Address where server receives data from
+                        string serverReceiveAddress = split[2]; 
 
                         // Initialize the VideoStreaming classes
-                        this.receivedStream = new VideoStreamingEndpoint(localReceiveAddress, metaDataConnection, onNewFrame);
-                        this.sendingStream = new VideoStreamingOrigin(counterpartReceiveAddress, metaDataConnection);
+                        this.receivedStream = new VideoStreamingEndpoint(receiveAddress, metaDataConnection, onNewFrame);
+                        this.sendingStream = new VideoStreamingOrigin(sendAddress, metaDataConnection);
 
                         // Notify the server about client's address
-                        metaDataConnection.Send(new Message { tag = GetTag(), message = $"ready,{remoteSendAddress},{localReceiveAddress}" });
+                        metaDataConnection.Send(new Message { tag = GetTag(), message = $"ready,{sendAddress},{receiveAddress}" });
                     }
                     break;
                 case "ready":
@@ -144,12 +141,9 @@ namespace BadVideoStreaming
                         // Address where client receives data from
                         string clientReceiveAddress = split[2];
 
-                        // Store the client's receiving address
-                        counterpartReceiveAddress = remoteSendAddress;
-
                         // Initialize the VideoStreaming classes
-                        this.receivedStream = new VideoStreamingEndpoint(remoteSendAddress, metaDataConnection, onNewFrame);
-                        this.sendingStream = new VideoStreamingOrigin(counterpartReceiveAddress, metaDataConnection);
+                        this.receivedStream = new VideoStreamingEndpoint(sendAddress, metaDataConnection, onNewFrame);
+                        this.sendingStream = new VideoStreamingOrigin(sendAddress, metaDataConnection);
                         OnConnect();
                     }
                     break;

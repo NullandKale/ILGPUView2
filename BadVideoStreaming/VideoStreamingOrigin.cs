@@ -12,12 +12,10 @@ namespace BadVideoStreaming
     public class VideoStreamingOrigin
     {
         public Connection metadataConnection;
-        public string address;
         private UdpClient udpClient;
 
         public VideoStreamingOrigin(string udpAddress, Connection metadataConnection)
         {
-            address = udpAddress;
             this.metadataConnection = metadataConnection;
 
             // Create a UdpClient for sending data

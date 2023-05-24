@@ -20,8 +20,9 @@ namespace ExampleProject.Modes
 {
     public class VideoStreamingMode : IRenderCallback
     {
-        private string bitmapFolder = "C:\\Users\\alec\\source\\python\\depth_video\\input";
-        private string remoteIp = "192.168.0.195";
+        private string bitmapFolder = "C:\\Users\\zinsl\\Downloads\\Nikki Magnifying Glass(1)";
+        private string localExternalIP = "73.213.36.216";
+        private string remoteIP = "73.213.36.216";
         private bool isServer = true;
 
         private BiDirectionalStreaming biDirectionalStreaming;
@@ -39,18 +40,18 @@ namespace ExampleProject.Modes
             UIBuilder.AddLabel($"Self IP: {BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}");
 
             UIBuilder.AddLabel("Remote IP");
-            UIBuilder.AddTextBox(remoteIp, (newVal) => { remoteIp = newVal; });
+            UIBuilder.AddTextBox(remoteIP, (newVal) => { remoteIP = newVal; });
 
             string[] modes = { "server", "client" };
             UIBuilder.AddDropdown(modes, (newVal) => { isServer = newVal == 0; });
 
             UIBuilder.AddButton("Connect", () =>
             {
-                string address = remoteIp + ":4010";
-                string localReceiveAddress = isServer ? $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:6000" : $"{BadVideoStreaming.Comms.Utils.GetLocalIPAddress()}:6001";
-                string remoteSendAddress = isServer ? $"{remoteIp}:6000" : $"{remoteIp}:5000";
+                string address = remoteIP + ":4010";
+                string receiveAddress = isServer ? $"{localExternalIP}:5000" : $"{localExternalIP}:5001";
+                string sendAddress = isServer ? $"{remoteIP}:5001" : $"{remoteIP}:5000";
 
-                biDirectionalStreaming = new BiDirectionalStreaming(address, isServer, OnNewFrame, localReceiveAddress, remoteSendAddress);
+                biDirectionalStreaming = new BiDirectionalStreaming(address, isServer, OnNewFrame, receiveAddress, sendAddress);
                 biDirectionalStreaming.onConnect.Add(() =>
                 {
                     Thread t = new Thread(() =>
@@ -59,22 +60,22 @@ namespace ExampleProject.Modes
                         string[] files = Directory.GetFiles(bitmapFolder);
                         while(true)
                         {
-                        for (int i = 0; i < files.Length; i++)
-                        {
-                            string? file = files[isServer ? i : (files.Length - 1) - i];
-                            // Only process image files
-                            if (file.EndsWith(".jpg") || file.EndsWith(".jpeg") || file.EndsWith(".png"))
+                            for (int i = 0; i < files.Length; i++)
                             {
-                                // Load the image file into a Bitmap
-                                using var bitmap = new Bitmap(file);
+                                string? file = files[isServer ? i : (files.Length - 1) - i];
+                                // Only process image files
+                                if (file.EndsWith(".jpg") || file.EndsWith(".jpeg") || file.EndsWith(".png"))
+                                {
+                                    // Load the image file into a Bitmap
+                                    using var bitmap = new Bitmap(file);
 
-                                // Send the bitmap
-                                biDirectionalStreaming.SendFrame(0, bitmap);
+                                    // Send the bitmap
+                                    biDirectionalStreaming.SendFrame(0, bitmap);
 
-                                // Wait for 33ms (roughly 30 FPS)
-                                Thread.Sleep(33);
+                                    // Wait for 33ms (roughly 30 FPS)
+                                    Thread.Sleep(33);
+                                }
                             }
-                        }
                         }
                     });
                     t.IsBackground = true;
