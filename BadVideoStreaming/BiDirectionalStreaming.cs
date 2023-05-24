@@ -30,6 +30,10 @@ namespace BadVideoStreaming
             this.onNewFrame = onNewFrame;
             this.receiveAddress = receiveAddress;
             this.sendAddress = sendAddress;
+
+            Trace.WriteLine($"local sendAddress: {sendAddress}");
+            Trace.WriteLine($"local receiveAddress: {receiveAddress}");
+
             onConnect = new List<Action>();
         }
 
@@ -123,7 +127,10 @@ namespace BadVideoStreaming
                         // Address where server sends data to
                         string serverSendAddress = split[1];
                         // Address where server receives data from
-                        string serverReceiveAddress = split[2]; 
+                        string serverReceiveAddress = split[2];
+
+                        Trace.WriteLine($"server sendAddress: {serverSendAddress}");
+                        Trace.WriteLine($"server receiveAddress: {serverReceiveAddress}");
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(receiveAddress, metaDataConnection, onNewFrame);
@@ -140,6 +147,9 @@ namespace BadVideoStreaming
                         string clientSendAddress = split[1];
                         // Address where client receives data from
                         string clientReceiveAddress = split[2];
+
+                        Trace.WriteLine($"client sendAddress: {clientSendAddress}");
+                        Trace.WriteLine($"client receiveAddress: {clientReceiveAddress}");
 
                         // Initialize the VideoStreaming classes
                         this.receivedStream = new VideoStreamingEndpoint(sendAddress, metaDataConnection, onNewFrame);
