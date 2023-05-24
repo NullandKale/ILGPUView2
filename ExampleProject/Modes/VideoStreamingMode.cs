@@ -20,9 +20,9 @@ namespace ExampleProject.Modes
 {
     public class VideoStreamingMode : IRenderCallback
     {
-        private string bitmapFolder = "C:\\Users\\zinsl\\Downloads\\Nikki Magnifying Glass(1)";
+        private string bitmapFolder = "C:\\Users\\alec\\source\\python\\depth_video\\input";
         private string localExternalIP = "73.213.36.216";
-        private string remoteIP = "73.213.36.216";
+        private string remoteIP = "192.168.0.195";
         private bool isServer = true;
 
         private BiDirectionalStreaming biDirectionalStreaming;

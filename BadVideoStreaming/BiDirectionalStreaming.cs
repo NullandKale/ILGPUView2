@@ -152,7 +152,7 @@ namespace BadVideoStreaming
                         Trace.WriteLine($"client receiveAddress: {clientReceiveAddress}");
 
                         // Initialize the VideoStreaming classes
-                        this.receivedStream = new VideoStreamingEndpoint(sendAddress, metaDataConnection, onNewFrame);
+                        this.receivedStream = new VideoStreamingEndpoint(receiveAddress, metaDataConnection, onNewFrame);
                         this.sendingStream = new VideoStreamingOrigin(sendAddress, metaDataConnection);
                         OnConnect();
                     }
