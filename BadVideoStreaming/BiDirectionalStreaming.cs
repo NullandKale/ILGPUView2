@@ -160,9 +160,6 @@ namespace BadVideoStreaming
                 default: break;
             }
         }
-
-
-
     }
 
 }
