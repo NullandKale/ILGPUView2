@@ -45,8 +45,9 @@ namespace BadVideoStreaming.Comms
             stream = tcpClient.GetStream();
             onConnected();
 
-            byte[] message = new byte[4096];
+            var message = new StringBuilder();
             int bytesRead;
+            var buffer = new byte[1024];
 
             while (true)
             {
@@ -54,7 +55,7 @@ namespace BadVideoStreaming.Comms
 
                 try
                 {
-                    bytesRead = stream.Read(message, 0, 4096);
+                    bytesRead = stream.Read(buffer, 0, buffer.Length);
                 }
                 catch
                 {
@@ -66,21 +67,28 @@ namespace BadVideoStreaming.Comms
                     break;
                 }
 
-                var incomingMessage = Encoding.ASCII.GetString(message, 0, bytesRead);
-                HandleMessage(incomingMessage);
+                message.Append(Encoding.ASCII.GetString(buffer, 0, bytesRead));
+
+                if (message.ToString().EndsWith("\n"))
+                {
+                    HandleMessage(message.ToString().Trim());
+                    message.Clear();
+                }
             }
 
             tcpClient.Close();
         }
 
+
         public override void Send(Message message)
         {
             if (stream != null)
             {
-                byte[] msg = Encoding.ASCII.GetBytes(message.ToString());
+                byte[] msg = Encoding.ASCII.GetBytes($"{message.ToString()}\n");
                 stream.Write(msg, 0, msg.Length);
             }
         }
+
     }
 }
 
