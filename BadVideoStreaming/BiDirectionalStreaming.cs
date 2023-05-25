@@ -38,7 +38,7 @@ namespace BadVideoStreaming
         public override void SendFrame(byte streamID, Bitmap frame)
         {
             // Send the frame using UDP here
-            sendingStream.SendFrame(new Frame(streamID, frame), );
+            sendingStream.SendFrame(new Frame(streamID, frame));
         }
     }
 
