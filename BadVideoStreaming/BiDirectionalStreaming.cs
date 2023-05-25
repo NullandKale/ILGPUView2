@@ -42,6 +42,56 @@ namespace BadVideoStreaming
         }
     }
 
+    public class FrameMessageHandler : MessageHandler
+    {
+        private const string Tag = "Frame";
+        private Action<byte[]> onFrameReceived;
+
+        public FrameMessageHandler(Action<byte[]> onFrameReceived)
+        {
+            this.onFrameReceived = onFrameReceived;
+        }
+
+        public void OnStart(Connection connection) { }
+
+        public string GetTag() => Tag;
+
+        public void Receive(Message message)
+        {
+            byte[] frameData = Convert.FromBase64String(message.message);
+            onFrameReceived(frameData);
+        }
+    }
+
+    public class TcpVideoConnection : VideoConnection
+    {
+        private Connection metaDataConnection;
+        private FrameMessageHandler frameHandler;
+
+        public TcpVideoConnection(Connection metaDataConnection, Action<int, int, int, long, byte[]> onNewFrame)
+        {
+            this.metaDataConnection = metaDataConnection;
+
+            frameHandler = new FrameMessageHandler(data =>
+            {
+                Frame frame = new Frame(data);
+                onNewFrame(frame.width, frame.height, frame.streamid, frame.timestamp, frame.imageData.ToArray());
+            });
+
+            metaDataConnection.AddMessageHandler(frameHandler);
+        }
+
+        public override void SendFrame(byte streamID, Bitmap frame)
+        {
+            Frame videoFrame = new Frame(streamID, frame);
+
+            string base64Frame = Convert.ToBase64String(videoFrame.GetBytes().ToArray());
+
+            metaDataConnection.Send(new Message { tag = frameHandler.GetTag(), message = base64Frame });
+        }
+    }
+
+
 
     public class BiDirectionalStreaming : MessageHandler
     {
@@ -131,7 +181,8 @@ namespace BadVideoStreaming
                         Trace.WriteLine($"server sendAddress: {serverSendAddress}");
                         Trace.WriteLine($"server receiveAddress: {serverReceiveAddress}");
 
-                        this.videoConnection = new UdpVideoConnection(sendAddress, receiveAddress, metaDataConnection, onNewFrame);
+                        this.videoConnection = new TcpVideoConnection(metaDataConnection, onNewFrame);
+                        //this.videoConnection = new UdpVideoConnection(sendAddress, receiveAddress, metaDataConnection, onNewFrame);
 
                         // Notify the server about client's address
                         metaDataConnection.Send(new Message { tag = GetTag(), message = $"ready,{sendAddress},{receiveAddress}" });
@@ -150,7 +201,8 @@ namespace BadVideoStreaming
                         Trace.WriteLine($"client sendAddress: {clientSendAddress}");
                         Trace.WriteLine($"client receiveAddress: {clientReceiveAddress}");
 
-                        this.videoConnection = new UdpVideoConnection(sendAddress, receiveAddress, metaDataConnection, onNewFrame);
+                        this.videoConnection = new TcpVideoConnection(metaDataConnection, onNewFrame);
+                        //this.videoConnection = new UdpVideoConnection(sendAddress, receiveAddress, metaDataConnection, onNewFrame);
 
                         OnConnect();
                     }
