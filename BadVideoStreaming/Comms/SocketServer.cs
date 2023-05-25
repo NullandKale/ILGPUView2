@@ -69,15 +69,22 @@ namespace BadVideoStreaming.Comms
 
                 message.Append(Encoding.ASCII.GetString(buffer, 0, bytesRead));
 
-                if (message.ToString().EndsWith("\n"))
+                // Split the received data by newline characters
+                string[] messages = message.ToString().Split('\n');
+
+                for (int i = 0; i < messages.Length - 1; i++)
                 {
-                    HandleMessage(message.ToString().Trim());
-                    message.Clear();
+                    // Handle each complete message
+                    HandleMessage(messages[i]);
                 }
+
+                // Keep any incomplete message for the next read
+                message = new StringBuilder(messages[messages.Length - 1]);
             }
 
             tcpClient.Close();
         }
+
 
 
         public override void Send(Message message)
@@ -86,6 +93,7 @@ namespace BadVideoStreaming.Comms
             {
                 byte[] msg = Encoding.ASCII.GetBytes($"{message.ToString()}\n");
                 stream.Write(msg, 0, msg.Length);
+                stream.Flush();
             }
         }
 
