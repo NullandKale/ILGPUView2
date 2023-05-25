@@ -22,6 +22,7 @@ namespace BadVideoStreaming.Comms
             server.Start();
 
             listenThread = new Thread(new ThreadStart(ListenForClients));
+            listenThread.IsBackground = true;
             listenThread.Start();
         }
 
