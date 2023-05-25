@@ -25,4 +25,33 @@ namespace BadVideoStreaming.Comms
             throw new Exception("Local IP Address Not Found!");
         }
     }
+
+    public class FrameTiming
+    {
+        private DateTime? lastFrameTime;
+        private List<double> frameIntervals = new List<double>();
+
+        public double AverageTimePerFrameMs
+        {
+            get
+            {
+                if (frameIntervals.Count == 0) return 0;
+                return frameIntervals.Average();
+            }
+        }
+        public void MarkFrameTime()
+        {
+            DateTime now = DateTime.UtcNow;
+            if (lastFrameTime.HasValue)
+            {
+                TimeSpan interval = now - lastFrameTime.Value;
+                frameIntervals.Add(interval.TotalMilliseconds);
+                if (frameIntervals.Count > 100) // Keep the last 100 samples
+                {
+                    frameIntervals.RemoveAt(0);
+                }
+            }
+            lastFrameTime = now;
+        }
+    }
 }

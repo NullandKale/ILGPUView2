@@ -15,6 +15,8 @@ using System.IO;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace ExampleProject.Modes
 {
@@ -28,6 +30,7 @@ namespace ExampleProject.Modes
         private BiDirectionalStreaming biDirectionalStreaming;
 
         private GPUImage frame;
+        private Label label;
 
         public void CreateUI()
         {
@@ -36,6 +39,8 @@ namespace ExampleProject.Modes
 
             UIBuilder.AddLabel($"Image Set Folder: ");
             UIBuilder.AddTextBox(bitmapFolder, (newVal) => { bitmapFolder = newVal; });
+
+            label = UIBuilder.AddLabel("Frame Data: Not Started");
 
             localExternalIP = BadVideoStreaming.Comms.Utils.GetLocalIPAddress();
             UIBuilder.AddLabel($"Self IP");
@@ -99,6 +104,11 @@ namespace ExampleProject.Modes
             {
                 Trace.WriteLine(e);
             }
+
+            Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                label.Content = $"Send: {biDirectionalStreaming.videoConnection.TimePerFrameSentMS.ToString("00.00")} \t Received: {biDirectionalStreaming.videoConnection.TimePerFrameReceivedMS.ToString("00.00")}";
+            });
         }
 
 

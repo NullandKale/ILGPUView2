@@ -11,88 +11,8 @@ using System.Threading.Tasks;
 
 namespace BadVideoStreaming
 {
-    public abstract class VideoConnection
-    {
-        public Action<int, int, int, long, byte[]> onNewFrame;
 
-        public void SetOnNewFrameCallback(Action<int, int, int, long, byte[]> onNewFrame)
-        {
-            this.onNewFrame = onNewFrame;
-        }
-
-        public abstract void SendFrame(byte streamID, Bitmap frame);
-    }
-
-    public class UdpVideoConnection : VideoConnection
-    {
-        private VideoStreamingEndpoint receivedStream;
-        private VideoStreamingOrigin sendingStream;
-
-        public UdpVideoConnection(string sendAddress, string receiveAddress, Connection metadataConnection, Action<int, int, int, long, byte[]> onNewFrame)
-        {
-            // Initialize the VideoStreaming classes here
-            this.receivedStream = new VideoStreamingEndpoint(receiveAddress, metadataConnection, onNewFrame);
-            this.sendingStream = new VideoStreamingOrigin(sendAddress, metadataConnection);
-        }
-
-        public override void SendFrame(byte streamID, Bitmap frame)
-        {
-            // Send the frame using UDP here
-            sendingStream.SendFrame(new Frame(streamID, frame));
-        }
-    }
-
-    public class FrameMessageHandler : MessageHandler
-    {
-        private const string Tag = "Frame";
-        private Action<byte[]> onFrameReceived;
-
-        public FrameMessageHandler(Action<byte[]> onFrameReceived)
-        {
-            this.onFrameReceived = onFrameReceived;
-        }
-
-        public void OnStart(Connection connection) { }
-
-        public string GetTag() => Tag;
-
-        public void Receive(Message message)
-        {
-            byte[] frameData = Convert.FromBase64String(message.message.Trim());
-            onFrameReceived(frameData);
-        }
-    }
-
-    public class TcpVideoConnection : VideoConnection
-    {
-        private Connection metaDataConnection;
-        private FrameMessageHandler frameHandler;
-
-        public TcpVideoConnection(Connection metaDataConnection, Action<int, int, int, long, byte[]> onNewFrame)
-        {
-            this.metaDataConnection = metaDataConnection;
-
-            frameHandler = new FrameMessageHandler(data =>
-            {
-                Frame frame = new Frame(data);
-                onNewFrame(frame.width, frame.height, frame.streamid, frame.timestamp, frame.imageData.ToArray());
-            });
-
-            metaDataConnection.AddMessageHandler(frameHandler);
-        }
-
-        public override void SendFrame(byte streamID, Bitmap frame)
-        {
-            Frame videoFrame = new Frame(streamID, frame);
-
-            string base64Frame = Convert.ToBase64String(videoFrame.GetBytes().ToArray(), Base64FormattingOptions.None);
-
-            metaDataConnection.Send(new Message { tag = frameHandler.GetTag(), message = base64Frame });
-        }
-    }
-
-
-
+   
     public class BiDirectionalStreaming : MessageHandler
     {
         public string address;
