@@ -58,7 +58,7 @@ namespace BadVideoStreaming
 
         public void Receive(Message message)
         {
-            byte[] frameData = Convert.FromBase64String(message.message);
+            byte[] frameData = Convert.FromBase64String(message.message.Trim());
             onFrameReceived(frameData);
         }
     }
@@ -85,7 +85,7 @@ namespace BadVideoStreaming
         {
             Frame videoFrame = new Frame(streamID, frame);
 
-            string base64Frame = Convert.ToBase64String(videoFrame.GetBytes().ToArray());
+            string base64Frame = Convert.ToBase64String(videoFrame.GetBytes().ToArray(), Base64FormattingOptions.None);
 
             metaDataConnection.Send(new Message { tag = frameHandler.GetTag(), message = base64Frame });
         }
