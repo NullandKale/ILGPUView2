@@ -284,7 +284,7 @@ namespace GPU
         }
 
 
-        public bool Intersect(Ray ray, out float t_max)
+        public bool Intersect(Ray ray, out float t_min)
         {
             // Compute the inverse direction of the ray
             Vec3 inv_direction = new Vector3(1.0f / ray.b.x, 1.0f / ray.b.y, 1.0f / ray.b.z);
@@ -298,8 +298,8 @@ namespace GPU
             float t_z2 = (max.z - ray.a.z) * inv_direction.z;
 
             // Compute the t-values for the entry and exit points of the ray in the AABB
-            float t_min = XMath.Max(XMath.Max(XMath.Min(t_x1, t_x2), XMath.Min(t_y1, t_y2)), XMath.Min(t_z1, t_z2));
-            t_max = XMath.Min(XMath.Min(XMath.Max(t_x1, t_x2), XMath.Max(t_y1, t_y2)), XMath.Max(t_z1, t_z2));
+            t_min = XMath.Max(XMath.Max(XMath.Min(t_x1, t_x2), XMath.Min(t_y1, t_y2)), XMath.Min(t_z1, t_z2));
+            float t_max = XMath.Min(XMath.Min(XMath.Max(t_x1, t_x2), XMath.Max(t_y1, t_y2)), XMath.Max(t_z1, t_z2));
 
             // Check if there is a valid intersection
             return (t_min < t_max) && (t_min < t_max && t_min < t_max);

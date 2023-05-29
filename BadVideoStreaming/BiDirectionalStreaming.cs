@@ -11,8 +11,6 @@ using System.Threading.Tasks;
 
 namespace BadVideoStreaming
 {
-
-   
     public class BiDirectionalStreaming : MessageHandler
     {
         public string address;

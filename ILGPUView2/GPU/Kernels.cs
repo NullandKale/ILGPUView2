@@ -48,7 +48,7 @@ namespace GPU
 
         public interface I3TextureMask
         {
-            RGBA32 Apply(int tick, float x, float y, dImage output, dImage mask, dImage texture0, dImage texture1);
+            RGBA32 Apply(int tick, int x, int y, dImage output, dImage mask, dImage texture0, dImage texture1);
         }
 
 
@@ -257,10 +257,7 @@ namespace GPU
             int x = index.X % output.width;
             int y = index.X / output.width;
 
-            double u = (double)x / (double)output.width;
-            double v = (double)y / (double)output.height;
-
-            output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output, mask, texture0, texture1));
+            output.SetColorAt(x, y, filter.Apply(tick, x, y, output, mask, texture0, texture1));
         }
 
         public static void FramebufferMaskKernel<TFunc>(Index1D index, int tick, dImage output, FrameBuffer input, TFunc filter) where TFunc : unmanaged, IFramebufferMask

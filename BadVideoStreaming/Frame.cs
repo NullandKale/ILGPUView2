@@ -19,7 +19,7 @@ namespace BadVideoStreaming
             this.timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
             // Convert the image to a byte array
-            using Bitmap resizedFrame = new Bitmap(image, new Size((int)(1280 * 0.8f), (int)(720 * 0.8f)));
+            using Bitmap resizedFrame = new Bitmap(image, new Size((int)(1280), (int)(720)));
             using var ms = new MemoryStream();
 
             var jpgEncoder = GetEncoder(ImageFormat.Jpeg);

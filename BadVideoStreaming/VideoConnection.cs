@@ -62,7 +62,7 @@ namespace BadVideoStreaming
                 receivedFrameTimer.MarkFrameTime();
 
                 // call the onNewFrame parameter
-                onNewFrame(width, height, streamid, timestamp, imageData);
+                onNewFrame(streamid, width, height, timestamp, imageData);
             };
 
             metaDataConnection.AddMessageHandler(this);
