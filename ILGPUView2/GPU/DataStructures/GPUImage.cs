@@ -74,7 +74,7 @@ namespace GPU
 
         public dImage toDevice(Device gpu)
         {
-            if(gpuData == null)
+            if(gpuData == null || gpuData.Extent != data.Length)
             {
                 if(data != null && data.Length > 0)
                 {
