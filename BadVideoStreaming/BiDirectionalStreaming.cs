@@ -22,7 +22,7 @@ namespace BadVideoStreaming
         private string sendAddress;
         private string receiveAddress;
 
-        public BiDirectionalStreaming(string address, bool isServer, Action<int, int, int, long, byte[]> onNewFrame, string receiveAddress, string sendAddress)
+        public BiDirectionalStreaming(string address, bool isServer, Action<int, int, int, long, byte[]> onNewFrame, string receiveAddress = "", string sendAddress = "")
         {
             this.address = address;
             this.isServer = isServer;

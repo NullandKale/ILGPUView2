@@ -118,9 +118,7 @@ namespace GPU
 
         public Bitmap GetBitmap()
         {
-            byte[] data_bytes = new byte[width * height * 4];
-            Buffer.BlockCopy(data, 0, data_bytes, 0, data_bytes.Length);
-            return Utils.BitmapFromBytes(data_bytes, width, height);
+            return Utils.BitmapFromBytes(data, width, height);
         }
 
         public void Dispose()

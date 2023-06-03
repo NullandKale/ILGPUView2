@@ -510,6 +510,19 @@ namespace GPU
             return bmp;
         }
 
+        public static Bitmap BitmapFromBytes(int[] data, int width, int height)
+        {
+            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+
+            Marshal.Copy(data, 0, bmpData.Scan0, data.Length);
+
+            bmp.UnlockBits(bmpData);
+
+            return bmp;
+        }
+
         public static float GetRandomFloat(float v, uint seed0, float seed1, float seed2, uint counter)
         {
             uint seed = CreateSeed(seed0, counter, seed1, seed2);
