@@ -94,8 +94,6 @@ namespace BadVideoStreaming
                         // Address where server receives data from
                         string serverReceiveAddress = split[2];
 
-                        //server sendAddress: 69.125.155.57:5001
-                        //server receiveAddress: 73.213.36.216:5000
                         Trace.WriteLine($"server sendAddress: {serverSendAddress}");
                         Trace.WriteLine($"server receiveAddress: {serverReceiveAddress}");
 
@@ -114,8 +112,6 @@ namespace BadVideoStreaming
                         // Address where client receives data from
                         string clientReceiveAddress = split[2];
 
-                        //client sendAddress: 73.213.36.216:5001
-                        //client receiveAddress: 69.125.155.57:5000
                         Trace.WriteLine($"client sendAddress: {clientSendAddress}");
                         Trace.WriteLine($"client receiveAddress: {clientReceiveAddress}");
 
