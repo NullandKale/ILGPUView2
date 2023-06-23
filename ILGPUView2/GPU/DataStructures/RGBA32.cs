@@ -11,13 +11,23 @@ namespace GPU
         public byte b;
         public byte r;
 
+        //public unsafe RGBA32(int value)
+        //{
+        //    int* valuePtr = &value;
+        //    byte* bytePtr = (byte*)valuePtr;
+        //    r = bytePtr[0];
+        //    g = bytePtr[1];
+        //    b = bytePtr[2];
+        //    a = bytePtr[3];
+        //}
+
         public unsafe RGBA32(int value)
         {
             int* valuePtr = &value;
             byte* bytePtr = (byte*)valuePtr;
-            r = bytePtr[0];
+            r = bytePtr[2];
             g = bytePtr[1];
-            b = bytePtr[2];
+            b = bytePtr[0];
             a = bytePtr[3];
         }
 

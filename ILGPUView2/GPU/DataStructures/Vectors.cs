@@ -457,33 +457,33 @@ namespace GPU
             return a.lengthSquared().CompareTo(b.lengthSquared());
         }
 
-        internal static Vec3 abs(Vec3 vec3)
+        public static Vec3 abs(Vec3 vec3)
         {
             return new Vec3(XMath.Abs(vec3.x), XMath.Abs(vec3.y), XMath.Abs(vec3.z));
         }
 
-        internal static Vec3 ceil(Vec3 vec3)
+        public static Vec3 ceil(Vec3 vec3)
         {
             return new Vec3(XMath.Ceiling(vec3.x), XMath.Ceiling(vec3.y), XMath.Ceiling(vec3.z));
         }
 
-        internal static Vec3 mod(Vec3 vec3, float v)
+        public static Vec3 mod(Vec3 vec3, float v)
         {
             return vec3 - v * floor(vec3 / v);
             //return new Vec3(vec3.x % v, vec3.y % v, vec3.z % v);
         }
 
-        internal static Vec3 clamp(Vec3 vec3, float v1, float v2)
+        public static Vec3 clamp(Vec3 vec3, float v1, float v2)
         {
             return new Vec3(XMath.Clamp(vec3.x, v1, v2), XMath.Clamp(vec3.y, v1, v2), XMath.Clamp(vec3.z, v1, v2));
         }
 
-        internal static Vec3 floor(Vec3 vec3)
+        public static Vec3 floor(Vec3 vec3)
         {
             return new Vec3(XMath.Floor(vec3.x), XMath.Floor(vec3.y), XMath.Floor(vec3.z));
         }
 
-        internal static Vec3 vecif(Vec3 val, Vec3 cond, Vec3 newVal)
+        public static Vec3 vecif(Vec3 val, Vec3 cond, Vec3 newVal)
         {
             Vec3 toReturn = val;
 

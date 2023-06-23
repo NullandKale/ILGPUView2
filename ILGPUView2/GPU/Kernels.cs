@@ -41,6 +41,11 @@ namespace GPU
             RGBA32 Apply(int tick, float x, float y, dImage output, dImage input);
         }
 
+        public interface IIntImageMask
+        {
+            RGBA32 Apply(int tick, int x, int y, dImage output, dImage input);
+        }
+
         public interface ITexturedMask
         {
             RGBA32 Apply(int tick, float x, float y, dImage output, dImage mask, dImage texture);
@@ -231,6 +236,14 @@ namespace GPU
             double v = (double)y / (double)output.height;
 
             output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output, input));
+        }
+
+        public static void IntImageMaskKernel<TFunc>(Index1D index, int tick, dImage output, dImage input, TFunc filter) where TFunc : unmanaged, IIntImageMask
+        {
+            int x = index.X % output.width;
+            int y = index.X / output.width;
+
+            output.SetColorAt(x, y, filter.Apply(tick, x, y, output, input));
         }
 
         public static void FilteredDepthKernel(Index1D index, dImage output, FilterDepth filter)

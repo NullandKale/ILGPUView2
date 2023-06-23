@@ -213,6 +213,12 @@ namespace GPU
             kernel(output.width * output.height, ticks, output.toDevice(this), input.toDevice(this), filter);
         }
 
+        public void ExecuteIntMask<TFunc>(GPUImage output, GPUImage input, TFunc filter = default) where TFunc : unmanaged, IIntImageMask
+        {
+            var kernel = GetIntMaskKernel(filter);
+            kernel(output.width * output.height, ticks, output.toDevice(this), input.toDevice(this), filter);
+        }
+
         public void ExecuteDepthFilter(GPUImage output, FilterDepth filter)
         {
             filterDepth(output.width * output.height, output.toDevice(this), filter);
@@ -354,6 +360,17 @@ namespace GPU
             if (!kernels.ContainsKey(filter.GetType()))
             {
                 Action<Index1D, int, dImage, dImage, TFunc> kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, dImage, TFunc>(ImageMaskKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dImage, dImage, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, int, dImage, dImage, TFunc> GetIntMaskKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IIntImageMask
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                Action<Index1D, int, dImage, dImage, TFunc> kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, dImage, TFunc>(IntImageMaskKernel);
                 kernels.Add(filter.GetType(), kernel);
             }
 
