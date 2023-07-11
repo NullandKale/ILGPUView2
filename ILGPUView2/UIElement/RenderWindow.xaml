@@ -5,6 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:UI="clr-namespace:UIElement"
         mc:Ignorable="d"
-        Title="RenderWindow" Height="900" Width="1600" Closed="Window_Closed" Loaded="Window_Loaded">
+        Title="RenderWindow" Height="1080" Width="1920" Closed="Window_Closed" Loaded="Window_Loaded">
     <UI:RenderFrame x:Name="renderFrame"/>
 </Window>

@@ -179,7 +179,7 @@ namespace ExampleProject.Modes
         public RGBA32 Apply(int tick, float x, float y, dImage framebuffer)
         {
             double zoom = _offset.z + 1;
-            double offsetX = _offset.x;
+            double offsetX = _offset.x + 0.75;
             double offsetY = _offset.y;
 
             double zx = x * 3.5 / zoom - 2.5 / zoom + offsetX;
