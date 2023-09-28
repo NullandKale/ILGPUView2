@@ -7,6 +7,8 @@ using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using ILGPUView2.GPU.Filters;
 using System;
+using System.Collections.Generic;
+using System.Windows.Documents;
 using System.Windows.Input;
 using UIElement;
 using static GPU.Kernels;
@@ -33,7 +35,7 @@ namespace Modes
 
                 gpu.ExecuteSphereFilter(framebuffers[0], device_spheres,
                     new DebugRTFilter(gpu.ticks,
-                    new Camera3D(new Vec3(0, 0, 10), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 
+                    new Camera3D(new Vec3(0, 2, 2), new Vec3(0, 2, 0), new Vec3(0, -1, 0), 
                     gpu.framebuffer.width, gpu.framebuffer.height, 40f)));
                 gpu.ExecuteMask(gpu.framebuffer, framebuffers[0], new TAA(0.2f));
             }
@@ -61,11 +63,6 @@ namespace Modes
                     initialized = false;
                 }
             }
-
-            if (!initialized)
-            {
-                gpu.ExecuteFilter<LifeStartFilter>(framebuffers[0]);
-            }
         }
 
         private Vec3 RandomVec(float scale)
@@ -79,7 +76,7 @@ namespace Modes
 
         public void GenerateSpheresGPT0(int count)
         {
-            host_spheres = new Sphere[count + 7];
+            host_spheres = new Sphere[count + 6];
 
             rng = new Random(1337);
 
@@ -91,10 +88,10 @@ namespace Modes
             host_spheres[count + 0] = new Sphere(new Vec3(1, 1, 1), new Vec3(0, 0, 0), 0.75f, 1f);
             host_spheres[count + 1] = new Sphere(new Vec3(1, 0, 0), new Vec3(-1, 0, 0), 0.25f, 0f);
             host_spheres[count + 2] = new Sphere(new Vec3(0, 0, 1), new Vec3(1, 0, 0), 0.25f, 0f);
-            host_spheres[count + 3] = new Sphere(new Vec3(0, 1, 0), new Vec3(0, -1002.5, 0), 1000, 0f);
-            host_spheres[count + 4] = new Sphere(new Vec3(1, 1, 0), new Vec3(0, 3, 0), 1f, 0.2f);
-            host_spheres[count + 5] = new Sphere(new Vec3(0, 1, 1), new Vec3(-1, -1, 1), 0.5f, 0f);
-            host_spheres[count + 6] = new Sphere(new Vec3(1, 0, 1), new Vec3(1, -1, -1), 0.3f, 0f);
+            //host_spheres[count + 3] = new Sphere(new Vec3(0, 1, 0), new Vec3(0, -1002.5, 0), 1000, 0f);
+            host_spheres[count + 3] = new Sphere(new Vec3(1, 1, 0), new Vec3(0, 3, 0), 1f, 0.2f);
+            host_spheres[count + 4] = new Sphere(new Vec3(0, 1, 1), new Vec3(-1, -1, 1), 0.5f, 0f);
+            host_spheres[count + 5] = new Sphere(new Vec3(1, 0, 1), new Vec3(1, -1, -1), 0.3f, 0f);
 
             device_spheres = device.Allocate1D(host_spheres);
         }
@@ -115,7 +112,7 @@ namespace Modes
         {
             this.device = gpu.device;
             
-            //GenerateSpheres(50);
+            //GenerateSpheres(0);
             GenerateSpheresGPT0(10);
         }
 
@@ -173,7 +170,7 @@ namespace Modes
 
     public struct DebugRTFilter : ISphereImageFilter
     {
-        private readonly float scale = 100;
+        private readonly float scale = 10;
         private readonly int ticksPerDay = 500;
 
         private readonly int tick = 0;
@@ -286,7 +283,8 @@ namespace Modes
 
             if (hit.index == -1)
             {
-                return GetSkyColor(cam, sun, ray);
+                //return GetSkyColor(cam, sun, ray);
+                return new Vec3(0, 0, 0);
             }
 
             Sphere hitSphere = data[hit.index];

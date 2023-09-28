@@ -167,11 +167,19 @@ namespace ExampleProject.Modes
 
         public RGBA32 GetColorAt(int i)
         {
-            double t = (double)i / _maxIterations;
+            double t = ((double)i / _maxIterations);
 
             double r = 9.0 * (1.0 - t) * t * t * t * 255.0;
             double g = 15.0 * (1.0 - t) * (1.0 - t) * t * t * 255.0;
             double b = 8.5 * (1.0 - t) * (1.0 - t) * (1.0 - t) * t * 255.0;
+
+            double max = 250;
+            if(r >= max && g >= max && b >= max)
+            {
+                r = 0;
+                g = 0;
+                b = 0;
+            }
 
             return new RGBA32((byte)r, (byte)g, (byte)b, 255);
         }
@@ -214,7 +222,7 @@ namespace ExampleProject.Modes
                 zy = zyNew;
             }
 
-            return new RGBA32(0, 0, 0, 0);
+            return new RGBA32(0, 0, 0, 255);
         }
 
     }
