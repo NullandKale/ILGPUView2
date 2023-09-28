@@ -35,10 +35,10 @@ namespace ILGPUView2.GPU.DataStructures
             
             dims = dimensionSizesData.Count(size => size > 0);
 
-            size = dimensionLengthsData[0];
-            for (int i = 1; i < dimensionLengthsData.Length; i++)
+            size = dimensionSizesData[0];
+            for (int i = 1; i < dimensionSizesData.Length; i++)
             {
-                size *= dimensionLengthsData[i];
+                size *= dimensionSizesData[i] == 0 ? 1 : dimensionSizesData[i];
             }
 
             dimensionSizes = gpu.Allocate1D<int, Stride1D.Dense>(dimensionSizesData.Length, new Stride1D.Dense());
@@ -77,7 +77,8 @@ namespace ILGPUView2.GPU.DataStructures
         public void Set(T value = default, int x = 0, int y = 0, int z = 0, int w = 0, int u = 0, int v = 0)
         {
             isDirty = true;
-            cpuData[GetIndex(x, y, z, w, u, v)] = value;
+            long index = GetIndex(x, y, z, w, u, v);
+            cpuData[index] = value;
         }
 
         public T Get(float x = 0, float y = 0, float z = 0, float w = 0, float u = 0, float v = 0)
@@ -92,10 +93,19 @@ namespace ILGPUView2.GPU.DataStructures
 
         public long GetIndex(int x = 0, int y = 0, int z = 0, int w = 0, int u = 0, int v = 0)
         {
-            x = XMath.Abs(x) % dimensionSizesData[0]; y = XMath.Abs(y) % dimensionSizesData[1]; z = XMath.Abs(z) % dimensionSizesData[2];
-            w = XMath.Abs(w) % dimensionSizesData[3]; u = XMath.Abs(u) % dimensionSizesData[4]; v = XMath.Abs(v) % dimensionSizesData[5];
+            x = dimensionSizesData[0] == 0 ? 0 : XMath.Abs(x) % dimensionSizesData[0]; 
+            y = dimensionSizesData[1] == 0 ? 0 : XMath.Abs(y) % dimensionSizesData[1]; 
+            z = dimensionSizesData[2] == 0 ? 0 : XMath.Abs(z) % dimensionSizesData[2];
+            w = dimensionSizesData[3] == 0 ? 0 : XMath.Abs(w) % dimensionSizesData[3]; 
+            u = dimensionSizesData[4] == 0 ? 0 : XMath.Abs(u) % dimensionSizesData[4]; 
+            v = dimensionSizesData[5] == 0 ? 0 : XMath.Abs(v) % dimensionSizesData[5];
 
-            return x * dimensionLengthsData[1] * dimensionLengthsData[2] * dimensionLengthsData[3] * dimensionLengthsData[4] * dimensionLengthsData[5] + y * dimensionLengthsData[2] * dimensionLengthsData[3] * dimensionLengthsData[4] * dimensionLengthsData[5] + z * dimensionLengthsData[3] * dimensionLengthsData[4] * dimensionLengthsData[5] + w * dimensionLengthsData[4] * dimensionLengthsData[5] + u * dimensionLengthsData[5] + v;
+            return x * dimensionLengthsData[1] * dimensionLengthsData[2] * dimensionLengthsData[3] * dimensionLengthsData[4] * dimensionLengthsData[5] + 
+                   y * dimensionLengthsData[2] * dimensionLengthsData[3] * dimensionLengthsData[4] * dimensionLengthsData[5] + 
+                   z * dimensionLengthsData[3] * dimensionLengthsData[4] * dimensionLengthsData[5] + 
+                   w * dimensionLengthsData[4] * dimensionLengthsData[5] + 
+                   u * dimensionLengthsData[5] + 
+                   v;
         }
 
         public long GetIndex(float x = 0f, float y = 0f, float z = 0f, float w = 0f, float u = 0f, float v = 0f)
