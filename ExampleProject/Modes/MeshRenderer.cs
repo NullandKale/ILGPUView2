@@ -39,7 +39,8 @@ namespace ExampleProject.Modes
 
         public void OnRender(GPU.Device gpu)
         {
-            gpu.ExecuteTriangleFilter(gpu.framebuffer, triangles, new DrawTriangles(gpu.ticks));
+            //gpu.ExecuteTriangleFilter(gpu.framebuffer, triangles, new DrawTriangles(gpu.ticks));
+            gpu.ExecuteTriangleFilterMany(gpu.framebuffer, triangles, new DrawTrianglesTiled(gpu.ticks, 1.77f, 0.0001f, 10000));
         }
 
         public void OnStart(GPU.Device gpu)
@@ -66,9 +67,9 @@ namespace ExampleProject.Modes
                 {
                     case "v":
                         vertices.Add(new Vec3(
-                            float.Parse(parts[1]),
-                            float.Parse(parts[2]),
-                            float.Parse(parts[3])
+                            -float.Parse(parts[1]),
+                            -float.Parse(parts[2]),
+                            -float.Parse(parts[3])
                         ));
                         break;
                     case "f":

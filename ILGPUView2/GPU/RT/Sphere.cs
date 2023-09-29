@@ -4,7 +4,7 @@ using System;
 
 namespace GPU.RT
 {
-    public class Triangle
+    public class RTTriangle
     {
         public static bool Intersect(ArrayView1D<Vec3, Stride1D.Dense> verts, int offset, Ray ray, out float t)
         {
