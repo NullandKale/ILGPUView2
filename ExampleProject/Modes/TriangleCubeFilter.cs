@@ -122,14 +122,14 @@ namespace ExampleProject.Modes
     }
 
 
-    public unsafe struct DrawTrianglesTiled : ITriangleImageFilterMany
+    public unsafe struct DrawTrianglesTiled : ITriangleImageFilterTiled
     {
         public int tick;
         public float aspectRatio;
         public float near;
         public float far;
 
-        public Mat4x4 rotationMatrix;
+        public Mat4x4 matrix;
 
         public DrawTrianglesTiled(int tick, float aspectRatio, float near, float far)
         {
@@ -138,18 +138,17 @@ namespace ExampleProject.Modes
             this.near = near;
             this.far = far;
 
-            rotationMatrix = Mat4x4.CreateMVPMatrix(tick, aspectRatio, near, far);
+            matrix = Mat4x4.CreateMVPMatrix(tick, aspectRatio, near, far);
         }
 
-        public void DrawMany(int tick, int xMin, int yMin, int xMax, int yMax, dImage output, ArrayView2D<float, Stride2D.DenseY> depthBuffer, ArrayView1D<Triangle, Stride1D.Dense> triangles)
+        public void DrawTile(int tick, int xMin, int yMin, int xMax, int yMax, dImage output, ArrayView2D<float, Stride2D.DenseY> depthBuffer, ArrayView1D<Triangle, Stride1D.Dense> triangles)
         {
             for (int i = 0; i < triangles.Length; i++)
             {
-                // You can directly insert the replacement for MultiplyTriangle here
                 Triangle original = triangles[i];
-                Vec4 v0 = rotationMatrix.MultiplyVector(new Vec4(original.v0.x, original.v0.y, original.v0.z, 1.0f));
-                Vec4 v1 = rotationMatrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
-                Vec4 v2 = rotationMatrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
+                Vec4 v0 = matrix.MultiplyVector(new Vec4(original.v0.x, original.v0.y, original.v0.z, 1.0f));
+                Vec4 v1 = matrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
+                Vec4 v2 = matrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
 
                 Triangle t = new Triangle(
                     new Vec3(v0.x / v0.w, v0.y / v0.w, v0.z / v0.w),
