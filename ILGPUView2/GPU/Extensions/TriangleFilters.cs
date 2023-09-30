@@ -29,6 +29,9 @@ namespace GPU
     public interface ITriangleImageFilterTiled
     {
         const int tileSize = 8;
+
+        float GetDepthClearColor();
+        RGBA32 GetColorClearColor();
         void DrawTile(int tick, int xMin, int yMin, int xMax, int yMax, FrameBuffer output, ArrayView1D<Triangle, Stride1D.Dense> triangles);
     }
 
@@ -49,9 +52,8 @@ namespace GPU
             {
                 for (int x = 0; x < ITriangleImageFilterTiled.tileSize; ++x)
                 {
-                    RGBA32 clearColor = new RGBA32(0, 0, 0);
-                    output.SetDepthPixel(startX + x, startY + y, ushort.MaxValue);
-                    output.SetColorAt(startX + x, startY + y, clearColor);
+                    output.SetDepthPixel(startX + x, startY + y, filter.GetDepthClearColor());
+                    output.SetColorAt(startX + x, startY + y, filter.GetColorClearColor());
                 }
             }
 

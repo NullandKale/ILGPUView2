@@ -112,14 +112,18 @@ namespace ExampleProject.Modes
 
                         if (isInTriangle)
                         {
-                            float depth = alpha * t.v0.z + beta * t.v1.z + gamma * t.v2.z;
-                            const float depthEpsilon = 1f;
+                            float depthValue = (alpha * t.v0.z + beta * t.v1.z + gamma * t.v2.z);
+                            float normalizedDepth = 1.0f - ((depthValue - near) / (far - near));
 
-                            if (depth < output.GetDepth(x, y) + depthEpsilon)
+                            if (normalizedDepth < output.GetDepth(x, y))
                             {
-                                output.SetDepthPixel(x, y, depth);
+                                output.SetDepthPixel(x, y, normalizedDepth);
 
+                                // this shows the mesh correctly
                                 RGBA32 color = ComputeColorFromTriangle(x, y, t, (float)i / (float)triangles.Length);
+                                
+                                //RGBA32 color = new RGBA32(normalizedDepth, normalizedDepth, normalizedDepth);
+                                
 
                                 output.SetColorAt(x, y, color);
                             }
@@ -127,6 +131,16 @@ namespace ExampleProject.Modes
                     }
                 }
             }
+        }
+
+        public RGBA32 GetColorClearColor()
+        {
+            return new RGBA32(0, 0, 0);
+        }
+
+        public float GetDepthClearColor()
+        {
+            return far;
         }
 
         private RGBA32 ComputeColorFromTriangle(float x, float y, Triangle triangle, float i)

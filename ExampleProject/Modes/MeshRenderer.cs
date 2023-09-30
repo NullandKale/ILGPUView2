@@ -48,8 +48,8 @@ namespace ExampleProject.Modes
 
             if(frameBuffer != null)
             {
-                gpu.ExecuteTriangleFilterMany(frameBuffer, triangles, new DrawTrianglesTiled(gpu.ticks, 75, frameBuffer.width, frameBuffer.height, 10, 10000));
-                gpu.ExecuteFramebufferMask(gpu.framebuffer, frameBuffer.toDevice(gpu), new FrameBufferCopy(true));
+                gpu.ExecuteTriangleFilterMany(frameBuffer, triangles, new DrawTrianglesTiled(gpu.ticks, 75, frameBuffer.width, frameBuffer.height, 0.1f, 1000));
+                gpu.ExecuteFramebufferMask<FrameBufferCopy>(gpu.framebuffer, frameBuffer.toDevice(gpu));
             }
         }
 
