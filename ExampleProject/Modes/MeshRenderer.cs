@@ -14,12 +14,14 @@ using ILGPU.Algorithms;
 using System.Reflection.Metadata;
 using System;
 using System.IO;
+using Camera;
 
 namespace ExampleProject.Modes
 {
     public class MeshRenderer : IRenderCallback
     {
         private MemoryBuffer1D<Triangle, Stride1D.Dense> triangles;
+        private GPUFrameBuffer frameBuffer;
 
         public void CreateUI()
         {
@@ -39,8 +41,16 @@ namespace ExampleProject.Modes
 
         public void OnRender(GPU.Device gpu)
         {
-            //gpu.ExecuteTriangleFilter(gpu.framebuffer, triangles, new DrawTriangles(gpu.ticks));
-            gpu.ExecuteTriangleFilterMany(gpu.framebuffer, triangles, new DrawTrianglesTiled(gpu.ticks, 1.77f, 10, 10000));
+            if(frameBuffer == null || frameBuffer.width == gpu.framebuffer.width || frameBuffer.height == gpu.framebuffer.height)
+            {
+                frameBuffer = new GPUFrameBuffer(gpu.framebuffer.width, gpu.framebuffer.height);
+            }
+
+            if(frameBuffer != null)
+            {
+                gpu.ExecuteTriangleFilterMany(frameBuffer, triangles, new DrawTrianglesTiled(gpu.ticks, 75, frameBuffer.width, frameBuffer.height, 10, 10000));
+                gpu.ExecuteFramebufferMask(gpu.framebuffer, frameBuffer.toDevice(gpu), new FrameBufferCopy(true));
+            }
         }
 
         public void OnStart(GPU.Device gpu)

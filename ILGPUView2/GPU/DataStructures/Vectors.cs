@@ -4,6 +4,181 @@ using System.Numerics;
 
 namespace GPU
 {
+    public unsafe struct Vec4
+    {
+        public float x, y, z, w;
+
+        public Vec4(float x, float y, float z, float w)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = w;
+        }
+    }
+
+    public unsafe struct Mat4x4
+    {
+        public fixed float Matrix[16];
+
+        public Vec3 MultiplyVector(Vec3 vec)
+        {
+            float x = Matrix[0] * vec.x + Matrix[4] * vec.y + Matrix[8] * vec.z + Matrix[12];
+            float y = Matrix[1] * vec.x + Matrix[5] * vec.y + Matrix[9] * vec.z + Matrix[13];
+            float z = Matrix[2] * vec.x + Matrix[6] * vec.y + Matrix[10] * vec.z + Matrix[14];
+
+            return new Vec3(x, y, z);
+        }
+
+        public Vec4 MultiplyVector(Vec4 vec)
+        {
+            float x = Matrix[0] * vec.x + Matrix[4] * vec.y + Matrix[8] * vec.z + Matrix[12] * vec.w;
+            float y = Matrix[1] * vec.x + Matrix[5] * vec.y + Matrix[9] * vec.z + Matrix[13] * vec.w;
+            float z = Matrix[2] * vec.x + Matrix[6] * vec.y + Matrix[10] * vec.z + Matrix[14] * vec.w;
+            float w = Matrix[3] * vec.x + Matrix[7] * vec.y + Matrix[11] * vec.z + Matrix[15] * vec.w;
+
+            return new Vec4(x, y, z, w);
+        }
+
+        public GPU.Triangle MultiplyTriangle(GPU.Triangle tri)
+        {
+            Vec4 v0 = MultiplyVector(new Vec4(tri.v0.x, tri.v0.y, tri.v0.z, 1.0f));
+            Vec4 v1 = MultiplyVector(new Vec4(tri.v1.x, tri.v1.y, tri.v1.z, 1.0f));
+            Vec4 v2 = MultiplyVector(new Vec4(tri.v2.x, tri.v2.y, tri.v2.z, 1.0f));
+
+            return new GPU.Triangle(new Vec3(v0.x / v0.w, v0.y / v0.w, v0.z / v0.w),
+                                    new Vec3(v1.x / v1.w, v1.y / v1.w, v1.z / v1.w),
+                                    new Vec3(v2.x / v2.w, v2.y / v2.w, v2.z / v2.w));
+        }
+
+        public static Mat4x4 CreateCameraMatrix(Vec3 cameraPos, Vec3 up, Vec3 lookAt, int outputSizeX, int outputSizeY, float hFovDegrees, float near, float far)
+        {
+            Mat4x4 vpMatrix = new Mat4x4();
+
+            // Create the projection matrix
+            float aspectRatio = (float)outputSizeX / (float)outputSizeY;
+            float fov = hFovDegrees * (MathF.PI / 180.0f); // Convert to radians
+            float f = 1.0f / MathF.Tan(fov / 2.0f);
+            float range = far - near;
+
+            Mat4x4 projectionMatrix = new Mat4x4();
+            projectionMatrix.Matrix[0] = f / aspectRatio;
+            projectionMatrix.Matrix[5] = f;
+            projectionMatrix.Matrix[10] = (far + near) / range;
+            projectionMatrix.Matrix[14] = 2.0f * far * near / range;
+            projectionMatrix.Matrix[11] = -1.0f;
+            projectionMatrix.Matrix[15] = 1.0f;
+
+            // Create the view matrix
+            Vec3 zAxis = cameraPos - lookAt; // Forward
+            zAxis = zAxis.Normalize();
+            Vec3 xAxis = Vec3.cross(up, zAxis); // Right
+            xAxis = xAxis.Normalize();
+            Vec3 yAxis = Vec3.cross(zAxis, xAxis); // Up
+
+            Mat4x4 viewMatrix = new Mat4x4();
+            viewMatrix.Matrix[0] = xAxis.x;
+            viewMatrix.Matrix[4] = xAxis.y;
+            viewMatrix.Matrix[8] = xAxis.z;
+            viewMatrix.Matrix[12] = -Vec3.dot(xAxis, cameraPos);
+            viewMatrix.Matrix[1] = yAxis.x;
+            viewMatrix.Matrix[5] = yAxis.y;
+            viewMatrix.Matrix[9] = yAxis.z;
+            viewMatrix.Matrix[13] = -Vec3.dot(yAxis, cameraPos);
+            viewMatrix.Matrix[2] = zAxis.x;
+            viewMatrix.Matrix[6] = zAxis.y;
+            viewMatrix.Matrix[10] = zAxis.z;
+            viewMatrix.Matrix[14] = -Vec3.dot(zAxis, cameraPos);
+            viewMatrix.Matrix[15] = 1.0f;
+
+            // Combine the view and projection matrices to form the VP matrix
+            vpMatrix = projectionMatrix * viewMatrix;
+
+            return vpMatrix;
+        }
+
+
+        public static Mat4x4 CreateModelMatrix(Vec3 pos, Vec3 rotDegrees, Vec3 scale)
+        {
+            Mat4x4 modelMatrix = new Mat4x4();
+
+            // Create scaling matrix
+            Mat4x4 scaleMatrix = new Mat4x4();
+            scaleMatrix.Matrix[0] = scale.x;
+            scaleMatrix.Matrix[5] = scale.y;
+            scaleMatrix.Matrix[10] = scale.z;
+            scaleMatrix.Matrix[15] = 1.0f;
+
+            // Create rotation matrix
+            float rx = rotDegrees.x * (MathF.PI / 180.0f); // Convert to radians
+            float ry = rotDegrees.y * (MathF.PI / 180.0f); // Convert to radians
+            float rz = rotDegrees.z * (MathF.PI / 180.0f); // Convert to radians
+
+            Mat4x4 rotationX = new Mat4x4();
+            rotationX.Matrix[0] = 1.0f;
+            rotationX.Matrix[5] = MathF.Cos(rx);
+            rotationX.Matrix[6] = MathF.Sin(rx);
+            rotationX.Matrix[9] = -MathF.Sin(rx);
+            rotationX.Matrix[10] = MathF.Cos(rx);
+            rotationX.Matrix[15] = 1.0f;
+
+            Mat4x4 rotationY = new Mat4x4();
+            rotationY.Matrix[0] = MathF.Cos(ry);
+            rotationY.Matrix[2] = -MathF.Sin(ry);
+            rotationY.Matrix[5] = 1.0f;
+            rotationY.Matrix[8] = MathF.Sin(ry);
+            rotationY.Matrix[10] = MathF.Cos(ry);
+            rotationY.Matrix[15] = 1.0f;
+
+            Mat4x4 rotationZ = new Mat4x4();
+            rotationZ.Matrix[0] = MathF.Cos(rz);
+            rotationZ.Matrix[1] = MathF.Sin(rz);
+            rotationZ.Matrix[4] = -MathF.Sin(rz);
+            rotationZ.Matrix[5] = MathF.Cos(rz);
+            rotationZ.Matrix[10] = 1.0f;
+            rotationZ.Matrix[15] = 1.0f;
+
+            Mat4x4 rotationMatrix = rotationX * rotationY * rotationZ;
+
+            // Create translation matrix
+            Mat4x4 translationMatrix = new Mat4x4();
+            translationMatrix.Matrix[0] = 1.0f;
+            translationMatrix.Matrix[5] = 1.0f;
+            translationMatrix.Matrix[10] = 1.0f;
+            translationMatrix.Matrix[12] = pos.x;
+            translationMatrix.Matrix[13] = pos.y;
+            translationMatrix.Matrix[14] = pos.z;
+            translationMatrix.Matrix[15] = 1.0f;
+
+            // Combine the matrices to form the model matrix
+            modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+
+            return modelMatrix;
+        }
+
+        public static Mat4x4 operator *(Mat4x4 mat1, Mat4x4 mat2)
+        {
+            Mat4x4 result = new Mat4x4();
+
+            for (int row = 0; row < 4; row++)
+            {
+                for (int col = 0; col < 4; col++)
+                {
+                    float sum = 0.0f;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        sum += mat1.Matrix[row + k * 4] * mat2.Matrix[k + col * 4];
+                    }
+                    result.Matrix[row + col * 4] = sum;
+                }
+            }
+
+            return result;
+        }
+
+
+    }
+
     public struct Vec2
     {
         public float x;

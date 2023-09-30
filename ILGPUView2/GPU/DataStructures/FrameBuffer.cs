@@ -2,33 +2,153 @@
 using ILGPU;
 using GPU;
 using static GPU.Kernels;
+using System.Drawing;
+using System;
 
 namespace Camera
 {
-    public struct FrameBuffer
+    public class GPUFrameBuffer : IDisposable
     {
-        public int locked;
-        public ushort minDepth;
-        public ushort maxDepth;
         public int width;
         public int height;
-        public int showColor;
 
-        public ArrayView1D<byte, Stride1D.Dense> color;
+        public bool dirty = false;
+        public bool cpu_dirty = false;
+
+        public int[] colorData;
+        public ushort[] depthData;
+
+        public MemoryBuffer1D<int, Stride1D.Dense>? gpuColorData;
+        public MemoryBuffer1D<ushort, Stride1D.Dense>? gpuDepthData;
+
+        public GPUFrameBuffer(int width, int height)
+        {
+            this.width = width;
+            this.height = height;
+
+            colorData = new int[width * height];
+            depthData = new ushort[width * height];
+        }
+
+        public FrameBuffer toDevice(GPU.Device gpu)
+        {
+            if (gpuColorData == null || gpuColorData.Extent != colorData.Length)
+            {
+                if (colorData != null && colorData.Length > 0)
+                {
+                    gpuColorData = gpu.device.Allocate1D(colorData);
+                }
+                else
+                {
+                    gpuColorData = gpu.device.Allocate1D<int>(width * height);
+                }
+            }
+
+            if (gpuDepthData == null || gpuDepthData.Extent != depthData.Length)
+            {
+                if (depthData != null && depthData.Length > 0)
+                {
+                    gpuDepthData = gpu.device.Allocate1D(depthData);
+                }
+                else
+                {
+                    gpuDepthData = gpu.device.Allocate1D<ushort>(width * height);
+                }
+            }
+
+            if (cpu_dirty)
+            {
+                gpuColorData.CopyFromCPU(colorData);
+                gpuDepthData.CopyFromCPU(depthData);
+                cpu_dirty = false;
+            }
+
+            dirty = true;
+            return new FrameBuffer(width, height, gpuColorData, gpuDepthData);
+        }
+
+        public (int[] colorData, ushort[] depthData) toCPU()
+        {
+            if (gpuColorData != null && gpuDepthData != null)
+            {
+                if (colorData == null || colorData.Length != gpuColorData.Length)
+                {
+                    colorData = new int[gpuColorData.Length];
+                    dirty = true;
+                }
+
+                if (depthData == null || depthData.Length != gpuDepthData.Length)
+                {
+                    depthData = new ushort[gpuDepthData.Length];
+                    dirty = true;
+                }
+
+                if (dirty)
+                {
+                    gpuColorData.CopyToCPU(colorData);
+                    gpuDepthData.CopyToCPU(depthData);
+                    dirty = false;
+                }
+            }
+
+            return (colorData, depthData);
+        }
+
+        public Bitmap GetBitmap()
+        {
+            return Utils.BitmapFromBytes(colorData, width, height);
+        }
+
+        public void Dispose()
+        {
+            gpuColorData?.Dispose();
+            gpuDepthData?.Dispose();
+        }
+    }
+
+
+    public struct FrameBuffer
+    {
+        public int width;
+        public int height;
+
+        public ArrayView1D<int, Stride1D.Dense> color;
         public ArrayView1D<ushort, Stride1D.Dense> depth;
 
         public FrameBuffer(int width, int height,
-                           ushort minDepth, ushort maxDepth,
-                           ArrayView1D<byte, Stride1D.Dense> color, ArrayView1D<ushort, Stride1D.Dense> depth)
+                           ArrayView1D<int, Stride1D.Dense> color, ArrayView1D<ushort, Stride1D.Dense> depth)
         {
-            locked = 0;
-            showColor = 0;
-            this.minDepth = minDepth;
-            this.maxDepth = maxDepth;
             this.width = width;
             this.height = height;
             this.color = color;
             this.depth = depth;
+        }
+
+        public void SetColorAt(int x, int y, RGBA32 toSet)
+        {
+            if (x >= 0 && x < width && y >= 0 && y < height)
+            {
+                int index = y * width + x;
+                color[index] = toSet.ToInt();
+            }
+        }
+
+        public void SetColorAt(float x, float y, RGBA32 toSet)
+        {
+            SetColorAt((int)(x * width), (int)(y * height), toSet);
+        }
+
+        public void SetColorAt(Vec2 pos, RGBA32 toSet)
+        {
+            SetColorAt(pos.x, pos.y, toSet);
+        }
+
+        public void SetColorAt(int index, RGBA32 toSet)
+        {
+            if (index >= 0 && index < this.color.Length)
+            {
+                color[index] = toSet.ToInt();
+            }
         }
 
         public Vec3 GetColor(float x, float y)
@@ -50,111 +170,14 @@ namespace Camera
 
         public RGBA32 GetColorPixel(int index)
         {
-            index *= 4;
-
             if (index >= 0 && index < color.Length)
             {
-                return new RGBA32(
-                    color[index],
-                    color[index + 1],
-                    color[index + 2],
-                    color[index + 3]);
+                return new RGBA32(color[index]);
             }
             else
             {
                 return new RGBA32(1, 0, 1, 0);
             }
-        }
-
-
-
-        public ushort FilterDepthPixel(int x, int y, int filterWidth, int filterHeight, int fuzz)
-        {
-            ushort depth = GetDepthPixel(x, y);
-
-            if (depth == 0)
-            {
-                float accumulator = 0;
-                int count = 0;
-                int fuzzCounter = 0;
-
-                int xMax = x + filterWidth;
-                int xMin = x - filterWidth;
-
-                int yMax = y + filterHeight;
-                int yMin = y - filterHeight;
-
-                for (int i = y; i < yMax; i++)
-                {
-                    ushort c = GetDepthPixel(x, i);
-                    if (c != 0)
-                    {
-                        accumulator += c;
-                        count++;
-                        fuzzCounter++;
-                        if (fuzzCounter > fuzz)
-                        {
-                            i = yMax;
-                        }
-                    }
-
-                }
-
-                fuzzCounter = 0;
-
-                for (int i = y; i > yMin; i--)
-                {
-                    ushort c = GetDepthPixel(x, i);
-                    if (c != 0)
-                    {
-                        accumulator += c;
-                        count++;
-                        fuzzCounter++;
-                        if (fuzzCounter > fuzz)
-                        {
-                            i = yMin;
-                        }
-                    }
-                }
-
-                fuzzCounter = 0;
-
-                for (int i = x; i < xMax; i++)
-                {
-                    ushort c = GetDepthPixel(i, y);
-                    if (c != 0)
-                    {
-                        accumulator += c;
-                        count++;
-                        fuzzCounter++;
-                        if (fuzzCounter > fuzz)
-                        {
-                            i = xMax;
-                        }
-                    }
-                }
-
-                fuzzCounter = 0;
-
-                for (int i = x; i > xMin; i--)
-                {
-                    ushort c = GetDepthPixel(i, y);
-                    if (c != 0)
-                    {
-                        accumulator += c;
-                        count++;
-                        fuzzCounter++;
-                        if (fuzzCounter > fuzz)
-                        {
-                            i = xMin;
-                        }
-                    }
-                }
-
-                return (ushort)(accumulator / count);
-            }
-
-            return depth;
         }
 
         public float GetDepthPixel(float x, float y)
@@ -169,73 +192,25 @@ namespace Camera
             return toReturn;
         }
 
-        public float GetDepthPixel(float x, float y, int samples)
-        {
-            float xCord = x * width;
-            float yCord = y * height;
-
-            return GetDepthPixel((int)xCord, (int)yCord, samples);
-        }
-
-        public ushort GetDepth(float x, float y)
-        {
-            float xCord = x * width;
-            float yCord = y * height;
-
-            return GetDepthPixel((int)xCord, (int)yCord);
-        }
-
-        public (byte high, byte low) GetDepthBytes(float x, float y)
-        {
-            float xCord = x * width;
-            float yCord = y * height;
-
-            ushort depth = GetDepthPixel((int)xCord, (int)yCord);
-
-            byte upperByte = (byte)(depth >> 8);
-            byte lowerByte = (byte)(depth & 0xFF);
-
-            return (upperByte, lowerByte);
-        }
-
-        public float GetDepthPixel(int xCord, int yCord, int samples)
-        {
-            double total = 0;
-            double count = 0;
-            ushort min = 0;
-            ushort max = (ushort)(ushort.MaxValue * 1.0f);
-
-            for (int x = -samples; x <= samples; x++)
-            {
-                for (int y = -samples; y <= samples; y++)
-                {
-                    ushort val = GetDepthPixel(xCord + x, yCord + y);
-
-                    if(val > min && val <= max)
-                    {
-                        total += val;
-                        count++;
-                    }
-                }
-            }
-
-            if(count == 0)
-            {
-                total = 1;
-            }
-
-            return Utils.Remap((float)(total / count), 0, 1000, 1, 0);
-
-        }
-
         public ushort GetDepthPixel(int xCord, int yCord)
         {
             return GetDepthPixel(yCord * width + xCord);
         }
 
+        public float GetDepth(int xCord, int yCord)
+        {
+            return GetDepthPixel(yCord * width + xCord);
+        }
+
+
         public void SetDepthPixel(int xCord, int yCord, ushort val)
         {
             SetDepthPixel(yCord * width + xCord, val);
+        }
+
+        public void SetDepthPixel(int xCord, int yCord, float val)
+        {
+            SetDepthPixel(yCord * width + xCord, (ushort)(val * ushort.MaxValue));
         }
 
         public void SetDepthPixel(int index, ushort val)
@@ -250,14 +225,7 @@ namespace Camera
         {
             if (index >= 0 && index < depth.Length)
             {
-                ushort val = depth[index];
-
-                if(val > 1000)
-                {
-                    val = 0;
-                }
-
-                return val;
+                return depth[index];
             }
             else
             {
@@ -268,7 +236,7 @@ namespace Camera
 
     public struct FrameBufferCopy : IFramebufferMask
     {
-        int showColor = 0;
+        int showColor = 1;
 
         public FrameBufferCopy(bool showColor)
         {
@@ -290,7 +258,8 @@ namespace Camera
             }
             else
             {
-                return new RGBA32(input.GetDepthPixel(x, y));
+                float depth = input.GetDepthPixel(x, y);
+                return new RGBA32(depth, depth, depth);
             }
         }
     }
