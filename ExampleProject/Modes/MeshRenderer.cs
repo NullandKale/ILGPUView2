@@ -40,7 +40,7 @@ namespace ExampleProject.Modes
         public void OnRender(GPU.Device gpu)
         {
             //gpu.ExecuteTriangleFilter(gpu.framebuffer, triangles, new DrawTriangles(gpu.ticks));
-            gpu.ExecuteTriangleFilterMany(gpu.framebuffer, triangles, new DrawTrianglesTiled(gpu.ticks, 1.77f, 0.0001f, 10000));
+            gpu.ExecuteTriangleFilterMany(gpu.framebuffer, triangles, new DrawTrianglesTiled(gpu.ticks, 1.77f, 10, 10000));
         }
 
         public void OnStart(GPU.Device gpu)

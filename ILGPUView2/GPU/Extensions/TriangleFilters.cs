@@ -25,11 +25,6 @@ namespace GPU
         }
     }
 
-    public interface ITriangleImageFilter
-    {
-        RGBA32 Draw(int tick, float x, float y, dImage output, ArrayView1D<Triangle, Stride1D.Dense> triangles);
-    }
-
     public interface ITriangleImageFilterTiled
     {
         const int tileSize = 8;
@@ -38,19 +33,6 @@ namespace GPU
 
     public static partial class Kernels
     {
-
-        public static void TriangleImageFilterKernel<TFunc>(Index1D index, int tick, dImage output, ArrayView1D<Triangle, Stride1D.Dense> triangles, TFunc filter) where TFunc : unmanaged, ITriangleImageFilter
-        {
-            int x = index.X % output.width;
-            int y = index.X / output.width;
-
-            float u = (float)x / (float)output.width;
-            float v = (float)y / (float)output.height;
-
-            Vec2 uv = new Vec2(u, v);
-
-            output.SetColorAt(x, y, filter.Draw(tick, uv.x, uv.y, output, triangles));
-        }
 
         public static void TriangleImageFilterManyKernel<TFunc>(Index1D index, int tick, dImage output, ArrayView1D<Triangle, Stride1D.Dense> triangles, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
@@ -81,23 +63,6 @@ namespace GPU
 
     public partial class Device
     {
-        public void ExecuteTriangleFilter<TFunc>(GPUImage output, MemoryBuffer1D<Triangle, Stride1D.Dense> triangles, TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilter
-        {
-            var kernel = GetTriangleImageFilterKernel(filter);
-            kernel(output.width * output.height, ticks, output.toDevice(this), triangles, filter);
-        }
-
-        private Action<Index1D, int, dImage, ArrayView1D<Triangle, Stride1D.Dense>, TFunc> GetTriangleImageFilterKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilter
-        {
-            if (!kernels.ContainsKey(filter.GetType()))
-            {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, ArrayView1D<Triangle, Stride1D.Dense>, TFunc>(TriangleImageFilterKernel);
-                kernels.Add(filter.GetType(), kernel);
-            }
-
-            return (Action<Index1D, int, dImage, ArrayView1D<Triangle, Stride1D.Dense>, TFunc>)kernels[filter.GetType()];
-        }
-
         public void ExecuteTriangleFilterMany<TFunc>(GPUImage output, MemoryBuffer1D<Triangle, Stride1D.Dense> triangles, TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             int numTiles = (output.width / ITriangleImageFilterTiled.tileSize) * (output.height / ITriangleImageFilterTiled.tileSize);
