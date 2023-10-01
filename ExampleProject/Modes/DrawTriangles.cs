@@ -16,10 +16,7 @@ namespace ExampleProject.Modes
         public float near;
         public float far;
 
-        public Mat4x4 matrix;
-
         public Mat4x4 cameraMatrix;
-        public Mat4x4 modelMatrix;
 
         public DrawTrianglesTiled(int tick, float hFovDegrees, int sizeX, int sizeY, float near, float far)
         {
@@ -36,46 +33,26 @@ namespace ExampleProject.Modes
             Vec3 lookAt = new Vec3(0, -0.35f, 0);
 
             cameraMatrix = Mat4x4.CreateCameraMatrix(cameraPos, up, lookAt, sizeX, sizeY, hFovDegrees, near, far);
-            modelMatrix = Mat4x4.CreateModelMatrix(new Vec3(0, 0, 0), new Vec3(0, 0, 0), new Vec3(1, 1, 1));
-
-            matrix = modelMatrix * cameraMatrix;
         }
 
-
-        public void DrawTile(int tick, int xMin, int yMin, int xMax, int yMax, FrameBuffer output, ArrayView1D<Triangle, Stride1D.Dense> triangles)
+        public void DrawTile(int tick, int xMin, int yMin, int xMax, int yMax, FrameBuffer output, dMesh mesh)
         {
-            for (int i = 0; i < triangles.Length; i++)
-            {
-                Triangle original = triangles[i];
-                Vec4 v0 = matrix.MultiplyVector(new Vec4(original.v0.x, original.v0.y, original.v0.z, 1.0f));
-                Vec4 v1 = matrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
-                Vec4 v2 = matrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
+            float epsilon = ITriangleImageFilterTiled.tileSize * 2.0f;
 
-                if (v0.w < 0 || v1.w < 0 || v2.w < 0)
+            for (int i = 0; i < mesh.triangles.Length; i++)
+            {
+                TransformedTriangle t = mesh.workingTriangles[i];
+
+                // Early exit if the triangle is completely outside the tile
+                if (t.maxX < xMin - epsilon || t.minX > xMax + epsilon || t.maxY < yMin - epsilon || t.minY > yMax + epsilon)
                 {
-                    // triangle behind camera
                     continue;
                 }
 
-                Triangle t = new Triangle(
-                    new Vec3(v0.x / v0.w, v0.y / v0.w, v0.z / v0.w),
-                    new Vec3(v1.x / v1.w, v1.y / v1.w, v1.z / v1.w),
-                    new Vec3(v2.x / v2.w, v2.y / v2.w, v2.z / v2.w)
-                );
-
-                Vec3 pv0 = new Vec3((t.v0.x + 1.0f) * output.width / 2f, (t.v0.y + 1.0f) * output.height / 2f, t.v0.z);
-                Vec3 pv1 = new Vec3((t.v1.x + 1.0f) * output.width / 2f, (t.v1.y + 1.0f) * output.height / 2f, t.v1.z);
-                Vec3 pv2 = new Vec3((t.v2.x + 1.0f) * output.width / 2f, (t.v2.y + 1.0f) * output.height / 2f, t.v2.z);
-
-                float minX = XMath.Min(pv0.x, XMath.Min(pv1.x, pv2.x));
-                float minY = XMath.Min(pv0.y, XMath.Min(pv1.y, pv2.y));
-                float maxX = XMath.Max(pv0.x, XMath.Max(pv1.x, pv2.x));
-                float maxY = XMath.Max(pv0.y, XMath.Max(pv1.y, pv2.y));
-
-                minX = XMath.Max((int)XMath.Floor(minX), xMin);
-                minY = XMath.Max((int)XMath.Floor(minY), yMin);
-                maxX = XMath.Min((int)XMath.Ceiling(maxX), xMax);
-                maxY = XMath.Min((int)XMath.Ceiling(maxY), yMax);
+                int minX = XMath.Max((int)XMath.Floor(t.minX), xMin);
+                int minY = XMath.Max((int)XMath.Floor(t.minY), yMin);
+                int maxX = XMath.Min((int)XMath.Ceiling(t.maxX), xMax);
+                int maxY = XMath.Min((int)XMath.Ceiling(t.maxY), yMax);
 
                 float vec_x1 = t.v1.x - t.v0.x;
                 float vec_y1 = t.v1.y - t.v0.y;
@@ -86,15 +63,14 @@ namespace ExampleProject.Modes
 
                 if (det > 0)
                 {
-                    // back face culling
                     continue;
                 }
 
                 float invDet = 1.0f / det;
 
-                for (int y = (int)minY; y <= (int)maxY; y++)
+                for (int y = minY; y <= maxY; y++)
                 {
-                    for (int x = (int)minX; x <= (int)maxX; x++)
+                    for (int x = minX; x <= maxX; x++)
                     {
                         float fx = (float)x / output.width * 2.0f - 1.0f;
                         float fy = (float)y / output.height * 2.0f - 1.0f;
@@ -119,11 +95,8 @@ namespace ExampleProject.Modes
                             {
                                 output.SetDepthPixel(x, y, normalizedDepth);
 
-                                // this shows the mesh correctly
-                                RGBA32 color = ComputeColorFromTriangle(x, y, t, (float)i / (float)triangles.Length);
-                                
+                                RGBA32 color = ComputeColorFromTriangle(x, y, t, (float)i / (float)mesh.triangles.Length);
                                 //RGBA32 color = new RGBA32(normalizedDepth, normalizedDepth, normalizedDepth);
-                                
 
                                 output.SetColorAt(x, y, color);
                             }
@@ -131,6 +104,11 @@ namespace ExampleProject.Modes
                     }
                 }
             }
+        }
+
+        public Mat4x4 GetCameraMat()
+        {
+            return cameraMatrix;
         }
 
         public RGBA32 GetColorClearColor()
@@ -143,7 +121,7 @@ namespace ExampleProject.Modes
             return far;
         }
 
-        private RGBA32 ComputeColorFromTriangle(float x, float y, Triangle triangle, float i)
+        private RGBA32 ComputeColorFromTriangle(float x, float y, TransformedTriangle triangle, float i)
         {
             float hue = i;
             float saturation = 1.0f;

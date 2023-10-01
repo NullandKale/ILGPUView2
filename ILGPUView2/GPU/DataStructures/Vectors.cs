@@ -1,6 +1,7 @@
 ﻿using ILGPU.Algorithms;
 using System;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace GPU
 {
@@ -15,8 +16,10 @@ namespace GPU
             this.z = z;
             this.w = w;
         }
+
     }
 
+    [StructLayout(LayoutKind.Sequential, Size = 64, Pack = 64)]
     public unsafe struct Mat4x4
     {
         public fixed float Matrix[16];
@@ -284,6 +287,7 @@ namespace GPU
 
     public struct Vec3
     {
+        public static readonly Vec3 Ones = new Vec3(1,1,1);
         public float x;
         public float y;
         public float z;
@@ -802,6 +806,17 @@ namespace GPU
         public static implicit operator Vec3(Vector4 d)
         {
             return new Vec3(d.X, d.Y, d.Z);
+        }
+
+
+        public static implicit operator Vec4(Vec3 d)
+        {
+            return new Vec4(d.x, d.y, d.z, 0);
+        }
+
+        public static implicit operator Vec3(Vec4 d)
+        {
+            return new Vec3(d.x, d.y, d.z);
         }
     }
 
