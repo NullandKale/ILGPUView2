@@ -43,7 +43,7 @@ namespace GPU
         }
     }
 
-    public partial class Device
+    public partial class Renderer
     {
         public void ExecuteVoxelFramebufferMask<TFunc>(Voxels voxels, GPUImage depth, GPUImage color, TFunc filter = default) where TFunc : unmanaged, IVoxelMask
         {

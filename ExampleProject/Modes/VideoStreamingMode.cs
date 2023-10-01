@@ -117,12 +117,12 @@ namespace ExampleProject.Modes
 
         }
 
-        public void OnLateRender(Device gpu)
+        public void OnLateRender(Renderer gpu)
         {
 
         }
 
-        public void OnRender(Device gpu)
+        public void OnRender(Renderer gpu)
         {
             if(frame != null)
             {
@@ -134,7 +134,7 @@ namespace ExampleProject.Modes
             }
         }
 
-        public void OnStart(Device gpu)
+        public void OnStart(Renderer gpu)
         {
 
         }

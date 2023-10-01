@@ -94,14 +94,14 @@ namespace ExampleProject.Modes
             }
         }
 
-        public void OnRender(GPU.Device gpu)
+        public void OnRender(GPU.Renderer gpu)
         {
             UpdateImage();
 
             gpu.ExecuteMask(gpu.framebuffer, image, new ImageFilters(sigma, size, (FilterType)filter));
         }
 
-        public void OnStart(GPU.Device gpu)
+        public void OnStart(GPU.Renderer gpu)
         {
 
         }
@@ -121,7 +121,7 @@ namespace ExampleProject.Modes
 
         }
 
-        public void OnLateRender(GPU.Device obj)
+        public void OnLateRender(GPU.Renderer obj)
         {
 
         }

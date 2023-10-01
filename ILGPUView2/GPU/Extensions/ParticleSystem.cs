@@ -52,7 +52,7 @@ namespace GPU
         }
     }
 
-    public partial class Device
+    public partial class Renderer
     {
         public void DrawParticleSystem<TFunc>(GPUImage output, HostParticleSystem particleSystem, TFunc filter = default) where TFunc : unmanaged, IParticleSystemDraw
         {

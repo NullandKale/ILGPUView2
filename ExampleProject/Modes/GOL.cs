@@ -21,7 +21,7 @@ namespace ExampleProject.Modes
             UIBuilder.AddLabel("Conway's Game Of Life!");
         }
 
-        public void OnRender(Device gpu)
+        public void OnRender(Renderer gpu)
         {
             ResizeFramebuffers(gpu);
 
@@ -34,7 +34,7 @@ namespace ExampleProject.Modes
             framebuffers[1] = t;
         }
 
-        public void OnStart(Device gpu)
+        public void OnStart(Renderer gpu)
         {
 
         }
@@ -49,7 +49,7 @@ namespace ExampleProject.Modes
 
         }
 
-        public void ResizeFramebuffers(Device gpu)
+        public void ResizeFramebuffers(Renderer gpu)
         {
             bool initialized = true;
 
@@ -83,7 +83,7 @@ namespace ExampleProject.Modes
 
         }
 
-        public void OnLateRender(Device obj)
+        public void OnLateRender(Renderer obj)
         {
 
         }

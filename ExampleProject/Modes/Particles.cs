@@ -60,11 +60,11 @@ namespace ExampleProject.Modes
             UIBuilder.AddSlider(randomFactorLabel, "Random Factor: ", 0, 1, 0.15f, (newRandomFactor) => { randomFactor = newRandomFactor; });
         }
 
-        public void OnStart(Device gpu)
+        public void OnStart(Renderer gpu)
         {
         }
 
-        public void OnRender(Device gpu)
+        public void OnRender(Renderer gpu)
         {
             if (particleSystem == null || particleCount != particleSystem.count) 
             {
@@ -93,7 +93,7 @@ namespace ExampleProject.Modes
 
         }
 
-        public void OnLateRender(Device obj)
+        public void OnLateRender(Renderer obj)
         {
 
         }

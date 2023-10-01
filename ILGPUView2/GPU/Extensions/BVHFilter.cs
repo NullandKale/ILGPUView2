@@ -38,7 +38,7 @@ namespace GPU
 
     }
 
-    public partial class Device
+    public partial class Renderer
     {
         public void ExecuteBVHFilter<TFunc>(GPUImage output, DEVICE_BVH bvh, TFunc filter = default) where TFunc : unmanaged, IBVHImageFilter
         {

@@ -53,18 +53,98 @@ namespace GPU
         }
     }
 
-
     public interface ITriangleImageFilterTiled
     {
         const int tileSize = 8;
+        float GetNear();
+        float GetFar();
         float GetDepthClearColor();
         RGBA32 GetColorClearColor();
         Mat4x4 GetCameraMat();
-        void DrawTile(int tick, int xMin, int yMin, int xMax, int yMax, FrameBuffer output, dMesh mesh);
+
+        // Vertex shader function
+        TransformedTriangle VertShader(Triangle original, dMesh mesh, int width, int height);
+
+        // Fragment shader function
+        RGBA32 FragShader(float x, float y, TransformedTriangle triangle, float i);
     }
 
     public static partial class Kernels
     {
+        private static void DrawTile<TFunc>(int tick, int xMin, int yMin, int xMax, int yMax, FrameBuffer output, dMesh mesh, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
+        {
+            // needs to be really high for skinny triangles
+            float epsilon = ITriangleImageFilterTiled.tileSize * 200.0f;
+
+            for (int i = 0; i < mesh.triangles.Length; i++)
+            {
+                // Early exit if the triangle is completely outside the tile
+                if (mesh.workingTriangles[i].maxX < xMin - epsilon || mesh.workingTriangles[i].minX > xMax + epsilon || mesh.workingTriangles[i].maxY < yMin - epsilon || mesh.workingTriangles[i].minY > yMax + epsilon)
+                {
+                    continue;
+                }
+
+                int minX = XMath.Max((int)XMath.Floor(mesh.workingTriangles[i].minX), xMin);
+                int minY = XMath.Max((int)XMath.Floor(mesh.workingTriangles[i].minY), yMin);
+                int maxX = XMath.Min((int)XMath.Ceiling(mesh.workingTriangles[i].maxX), xMax);
+                int maxY = XMath.Min((int)XMath.Ceiling(mesh.workingTriangles[i].maxY), yMax);
+
+                Vec3 v0 = mesh.workingTriangles[i].v0;
+                Vec3 v1 = mesh.workingTriangles[i].v1;
+                Vec3 v2 = mesh.workingTriangles[i].v2;
+
+                float vec_x1 = v1.x - v0.x;
+                float vec_y1 = v1.y - v0.y;
+                float vec_x2 = v2.x - v0.x;
+                float vec_y2 = v2.y - v0.y;
+
+                float det = vec_x1 * vec_y2 - vec_x2 * vec_y1;
+
+                if (det > 0)
+                {
+                    continue;
+                }
+
+                float invDet = 1.0f / det;
+
+                for (int y = minY; y <= maxY; y++)
+                {
+                    for (int x = minX; x <= maxX; x++)
+                    {
+                        float fx = (float)x / output.width * 2.0f - 1.0f;
+                        float fy = (float)y / output.height * 2.0f - 1.0f;
+
+                        float vec_px = fx - v0.x;
+                        float vec_py = fy - v0.y;
+
+                        float alpha = (vec_px * vec_y2 - vec_x2 * vec_py) * invDet;
+                        float beta = (vec_x1 * vec_py - vec_px * vec_y1) * invDet;
+                        float gamma = 1.0f - alpha - beta;
+
+                        bool isInTriangle = (alpha >= 0 && alpha <= 1) &&
+                                            (beta >= 0 && beta <= 1) &&
+                                            (gamma >= 0 && gamma <= 1);
+
+                        if (isInTriangle)
+                        {
+                            float depthValue = (alpha * v0.z + beta * v1.z + gamma * v2.z);
+                            float normalizedDepth = 1.0f - ((depthValue - filter.GetNear()) / (filter.GetFar() - filter.GetNear()));
+
+                            if (normalizedDepth < output.GetDepth(x, y))
+                            {
+                                output.SetDepthPixel(x, y, normalizedDepth);
+
+                                RGBA32 color = filter.FragShader(x, y, mesh.workingTriangles[i], (float)i / (float)mesh.triangles.Length);
+                                //RGBA32 color = new RGBA32(normalizedDepth, normalizedDepth, normalizedDepth);
+
+                                output.SetColorAt(x, y, color);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public static void TriangleImageFilterManyKernel<TFunc>(Index1D index, int threadCount, int tick, FrameBuffer output, dMesh mesh, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             int numTriangles = mesh.triangles.IntLength;
@@ -76,27 +156,8 @@ namespace GPU
             for (int i = startIdx; i < endIdx; ++i)
             {
                 Triangle original = mesh.triangles[i];
-
-                Vec4 v0 = mesh.matrix.MultiplyVector(new Vec4(original.v0.x, original.v0.y, original.v0.z, 1.0f));
-                Vec4 v1 = mesh.matrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
-                Vec4 v2 = mesh.matrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
-
-                Triangle t = new Triangle(
-                    new Vec3(v0.x / v0.w, v0.y / v0.w, v0.z / v0.w),
-                    new Vec3(v1.x / v1.w, v1.y / v1.w, v1.z / v1.w),
-                    new Vec3(v2.x / v2.w, v2.y / v2.w, v2.z / v2.w)
-                );
-
-                Vec3 pv0 = new Vec3((t.v0.x + 1.0f) * output.width / 2f, (t.v0.y + 1.0f) * output.height / 2f, t.v0.z);
-                Vec3 pv1 = new Vec3((t.v1.x + 1.0f) * output.width / 2f, (t.v1.y + 1.0f) * output.height / 2f, t.v1.z);
-                Vec3 pv2 = new Vec3((t.v2.x + 1.0f) * output.width / 2f, (t.v2.y + 1.0f) * output.height / 2f, t.v2.z);
-
-                float minX = XMath.Min(pv0.x, XMath.Min(pv1.x, pv2.x));
-                float minY = XMath.Min(pv0.y, XMath.Min(pv1.y, pv2.y));
-                float maxX = XMath.Max(pv0.x, XMath.Max(pv1.x, pv2.x));
-                float maxY = XMath.Max(pv0.y, XMath.Max(pv1.y, pv2.y));
-
-                mesh.workingTriangles[i] = new TransformedTriangle(t.v0, t.v1, t.v2, minX, minY, maxX, maxY);
+                TransformedTriangle transformed = filter.VertShader(original, mesh, output.width, output.height);
+                mesh.workingTriangles[i] = transformed;
             }
 
             int startX = (index.X % (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
@@ -114,11 +175,11 @@ namespace GPU
                 }
             }
 
-            filter.DrawTile(tick, startX, startY, endX, endY, output, mesh);
+            DrawTile(tick, startX, startY, endX, endY, output, mesh, filter);
         }
     }
 
-    public partial class Device
+    public partial class Renderer
     {
         public void ExecuteTriangleFilterMany<TFunc>(GPUFrameBuffer output, GPUMesh mesh, TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
         {

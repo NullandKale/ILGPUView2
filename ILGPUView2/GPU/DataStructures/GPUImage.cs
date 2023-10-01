@@ -72,7 +72,7 @@ namespace GPU
             return false;
         }
 
-        public dImage toDevice(Device gpu)
+        public dImage toDevice(Renderer gpu)
         {
             if(gpuData == null || gpuData.Extent != data.Length)
             {

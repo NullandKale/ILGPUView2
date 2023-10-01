@@ -101,7 +101,7 @@ namespace GPU
 
     }
 
-    public partial class Device
+    public partial class Renderer
     {
         public void ExecuteFilter<TFunc>(GPUImage output, TFunc filter = default) where TFunc : unmanaged, IImageFilter
         {

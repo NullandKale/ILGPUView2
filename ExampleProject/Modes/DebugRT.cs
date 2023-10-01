@@ -27,7 +27,7 @@ namespace Modes
 
         GPUImage[] framebuffers;
 
-        public void OnRender(GPU.Device gpu)
+        public void OnRender(GPU.Renderer gpu)
         {
             if (gpu.framebuffer != null)
             {
@@ -41,7 +41,7 @@ namespace Modes
             }
         }
 
-        private void ResizeFramebuffers(GPU.Device gpu)
+        private void ResizeFramebuffers(GPU.Renderer gpu)
         {
             bool initialized = true;
 
@@ -108,7 +108,7 @@ namespace Modes
             return new Sphere(color, center, radius, reflectance);
         }
 
-        public void OnStart(GPU.Device gpu)
+        public void OnStart(GPU.Renderer gpu)
         {
             this.device = gpu.device;
             
@@ -157,7 +157,7 @@ namespace Modes
 
         }
 
-        public void OnLateRender(GPU.Device obj)
+        public void OnLateRender(GPU.Renderer obj)
         {
 
         }

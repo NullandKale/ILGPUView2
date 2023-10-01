@@ -96,7 +96,7 @@ namespace ExampleProject.Modes
         Stopwatch timer;
         double lastFrameTime;
 
-        public void OnRender(Device gpu)
+        public void OnRender(Renderer gpu)
         {
             if (timer == null)
             {
@@ -120,7 +120,7 @@ namespace ExampleProject.Modes
             }
         }
 
-        public void OnStart(Device gpu)
+        public void OnStart(Renderer gpu)
         {
 
         }
@@ -135,7 +135,7 @@ namespace ExampleProject.Modes
             this.mode = mode;
         }
 
-        public void OnLateRender(Device obj)
+        public void OnLateRender(Renderer obj)
         {
 
         }

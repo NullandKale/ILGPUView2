@@ -34,14 +34,14 @@ namespace ExampleProject.Modes
 
         }
 
-        public void OnLateRender(GPU.Device gpu)
+        public void OnLateRender(GPU.Renderer gpu)
         {
 
         }
 
-        public void OnRender(GPU.Device gpu)
+        public void OnRender(GPU.Renderer gpu)
         {
-            if(frameBuffer == null || frameBuffer.width == gpu.framebuffer.width || frameBuffer.height == gpu.framebuffer.height)
+            if(frameBuffer == null || frameBuffer.width != gpu.framebuffer.width || frameBuffer.height != gpu.framebuffer.height)
             {
                 frameBuffer = new GPUFrameBuffer(gpu.framebuffer.width, gpu.framebuffer.height);
             }
@@ -53,7 +53,7 @@ namespace ExampleProject.Modes
             }
         }
 
-        public void OnStart(GPU.Device gpu)
+        public void OnStart(GPU.Renderer gpu)
         {
             mesh = GPUMesh.LoadObjTriangles("Assets/cat.obj");
             //mesh = GPUMesh.CreateCube();

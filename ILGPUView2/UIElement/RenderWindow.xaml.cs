@@ -11,7 +11,7 @@ namespace UIElement
     /// </summary>
     public partial class RenderWindow : Window, IDisposable
     {
-        Device gpu;
+        Renderer gpu;
         IRenderCallback callback;
         bool loaded = false;
 
@@ -22,7 +22,7 @@ namespace UIElement
             this.callback = callback;
             renderFrame.BeforeResolutionChanged = callback.BeforeResolutionChanged;
 
-            gpu = new Device(renderFrame);
+            gpu = new Renderer(renderFrame);
 
             Loaded += Window_Loaded;
 
@@ -97,11 +97,11 @@ namespace UIElement
     {
         public void SetMode(int mode);
         public void CreateUI();
-        public void OnStart(Device gpu);
-        public void OnRender(Device gpu);
+        public void OnStart(Renderer gpu);
+        public void OnRender(Renderer gpu);
         public void OnKeyPressed(Key key, ModifierKeys modifiers);
         public void OnStop();
-        public void OnLateRender(Device obj);
+        public void OnLateRender(Renderer obj);
         public (int xSize, int ySize, bool update) BeforeResolutionChanged(RenderWindow renderWindow, int newWidth, int newHeight);
     }
 

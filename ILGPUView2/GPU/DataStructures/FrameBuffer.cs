@@ -30,7 +30,7 @@ namespace Camera
             depthData = new float[width * height];
         }
 
-        public FrameBuffer toDevice(GPU.Device gpu)
+        public FrameBuffer toDevice(GPU.Renderer gpu)
         {
             if (gpuColorData == null || gpuColorData.Extent != colorData.Length)
             {

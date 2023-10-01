@@ -38,7 +38,7 @@ namespace GPU
 
     }
 
-    public partial class Device
+    public partial class Renderer
     {
         public void ExecuteSphereFilter<TFunc>(GPUImage output, ArrayView1D<Sphere, Stride1D.Dense> spheres, TFunc filter = default) where TFunc : unmanaged, ISphereImageFilter
         {

@@ -30,7 +30,7 @@ namespace GPU
         }
     }
 
-    public partial class Device
+    public partial class Renderer
     {
         public void ExecuteFramebufferMask<TFunc>(GPUImage output, FrameBuffer input, TFunc filter = default) where TFunc : unmanaged, IFramebufferMask
         {

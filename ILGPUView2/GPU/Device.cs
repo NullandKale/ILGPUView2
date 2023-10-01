@@ -18,7 +18,7 @@ using static GPU.Kernels;
 
 namespace GPU
 {
-    public partial class Device : IDisposable
+    public partial class Renderer : IDisposable
     {
         public GPUImage framebuffer;
         public RenderFrame renderFrame;
@@ -35,14 +35,14 @@ namespace GPU
         protected volatile bool isRunning;
         protected volatile bool isDrawing = false;
         protected Thread renderThread;
-        protected Action<Device> onRender;
-        protected Action<Device> onLateRender;
+        protected Action<Renderer> onRender;
+        protected Action<Renderer> onLateRender;
 
         protected Stopwatch timer;
         protected Queue<double> frameTimes = new Queue<double>();
         protected double frameTimeSum = 0;
 
-        public Device(RenderFrame renderFrame)
+        public Renderer(RenderFrame renderFrame)
         {
             bool debug = false;
             this.renderFrame = renderFrame;
@@ -70,7 +70,7 @@ namespace GPU
             };
         }
 
-        public void Start(Action<Device> onRender, Action<Device> onLateRender)
+        public void Start(Action<Renderer> onRender, Action<Renderer> onLateRender)
         {
             this.onRender = onRender;
             this.onLateRender = onLateRender;

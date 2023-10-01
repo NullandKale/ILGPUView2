@@ -200,9 +200,9 @@ namespace GPU
 
         private MemoryBuffer3D<RGBA32, Stride3D.DenseXY> colors;
         private MemoryBuffer3D<byte, Stride3D.DenseXY> states;
-        private Device gpu;
+        private Renderer gpu;
 
-        public Voxels(int xSize, int ySize, int zSize, Device gpu)
+        public Voxels(int xSize, int ySize, int zSize, Renderer gpu)
         {
             this.xSize = xSize;
             this.ySize = ySize;

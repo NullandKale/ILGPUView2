@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace GPU
 {
+    [StructLayout(LayoutKind.Sequential, Size = 16, Pack = 16)]
     public unsafe struct Vec4
     {
         public float x, y, z, w;
@@ -284,7 +285,7 @@ namespace GPU
         }
     }
 
-
+    [StructLayout(LayoutKind.Sequential, Size = 12, Pack = 16)]
     public struct Vec3
     {
         public static readonly Vec3 Ones = new Vec3(1,1,1);

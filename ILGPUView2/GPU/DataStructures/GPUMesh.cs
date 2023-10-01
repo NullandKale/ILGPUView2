@@ -111,7 +111,7 @@ namespace GPU
             return new GPUMesh(triangles);
         }
 
-        public dMesh toGPU(GPU.Device gpu)
+        public dMesh toGPU(GPU.Renderer gpu)
         {
             if (triangles == null || triangles.Extent != trianglesCPU.Length)
             {
