@@ -37,27 +37,30 @@ namespace ExampleProject.Modes
 
         public void DrawTile(int tick, int xMin, int yMin, int xMax, int yMax, FrameBuffer output, dMesh mesh)
         {
-            float epsilon = ITriangleImageFilterTiled.tileSize * 2.0f;
+            // needs to be really high for skinny triangles
+            float epsilon = ITriangleImageFilterTiled.tileSize * 200.0f;
 
             for (int i = 0; i < mesh.triangles.Length; i++)
             {
-                TransformedTriangle t = mesh.workingTriangles[i];
-
                 // Early exit if the triangle is completely outside the tile
-                if (t.maxX < xMin - epsilon || t.minX > xMax + epsilon || t.maxY < yMin - epsilon || t.minY > yMax + epsilon)
+                if (mesh.workingTriangles[i].maxX < xMin - epsilon || mesh.workingTriangles[i].minX > xMax + epsilon || mesh.workingTriangles[i].maxY < yMin - epsilon || mesh.workingTriangles[i].minY > yMax + epsilon)
                 {
                     continue;
                 }
 
-                int minX = XMath.Max((int)XMath.Floor(t.minX), xMin);
-                int minY = XMath.Max((int)XMath.Floor(t.minY), yMin);
-                int maxX = XMath.Min((int)XMath.Ceiling(t.maxX), xMax);
-                int maxY = XMath.Min((int)XMath.Ceiling(t.maxY), yMax);
+                int minX = XMath.Max((int)XMath.Floor(mesh.workingTriangles[i].minX), xMin);
+                int minY = XMath.Max((int)XMath.Floor(mesh.workingTriangles[i].minY), yMin);
+                int maxX = XMath.Min((int)XMath.Ceiling(mesh.workingTriangles[i].maxX), xMax);
+                int maxY = XMath.Min((int)XMath.Ceiling(mesh.workingTriangles[i].maxY), yMax);
 
-                float vec_x1 = t.v1.x - t.v0.x;
-                float vec_y1 = t.v1.y - t.v0.y;
-                float vec_x2 = t.v2.x - t.v0.x;
-                float vec_y2 = t.v2.y - t.v0.y;
+                Vec3 v0 = mesh.workingTriangles[i].v0;
+                Vec3 v1 = mesh.workingTriangles[i].v1;
+                Vec3 v2 = mesh.workingTriangles[i].v2;
+
+                float vec_x1 = v1.x - v0.x;
+                float vec_y1 = v1.y - v0.y;
+                float vec_x2 = v2.x - v0.x;
+                float vec_y2 = v2.y - v0.y;
 
                 float det = vec_x1 * vec_y2 - vec_x2 * vec_y1;
 
@@ -75,8 +78,8 @@ namespace ExampleProject.Modes
                         float fx = (float)x / output.width * 2.0f - 1.0f;
                         float fy = (float)y / output.height * 2.0f - 1.0f;
 
-                        float vec_px = fx - t.v0.x;
-                        float vec_py = fy - t.v0.y;
+                        float vec_px = fx - v0.x;
+                        float vec_py = fy - v0.y;
 
                         float alpha = (vec_px * vec_y2 - vec_x2 * vec_py) * invDet;
                         float beta = (vec_x1 * vec_py - vec_px * vec_y1) * invDet;
@@ -88,14 +91,14 @@ namespace ExampleProject.Modes
 
                         if (isInTriangle)
                         {
-                            float depthValue = (alpha * t.v0.z + beta * t.v1.z + gamma * t.v2.z);
+                            float depthValue = (alpha * v0.z + beta * v1.z + gamma * v2.z);
                             float normalizedDepth = 1.0f - ((depthValue - near) / (far - near));
 
                             if (normalizedDepth < output.GetDepth(x, y))
                             {
                                 output.SetDepthPixel(x, y, normalizedDepth);
 
-                                RGBA32 color = ComputeColorFromTriangle(x, y, t, (float)i / (float)mesh.triangles.Length);
+                                RGBA32 color = ComputeColorFromTriangle(x, y, mesh.workingTriangles[i], (float)i / (float)mesh.triangles.Length);
                                 //RGBA32 color = new RGBA32(normalizedDepth, normalizedDepth, normalizedDepth);
 
                                 output.SetColorAt(x, y, color);
