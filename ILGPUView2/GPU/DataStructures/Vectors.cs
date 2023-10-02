@@ -18,21 +18,16 @@ namespace GPU
             this.w = w;
         }
 
+        public Vec3 xyz()
+        {
+            return new Vec3(x, y, z);
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, Size = 64, Pack = 64)]
     public unsafe struct Mat4x4
     {
         public fixed float Matrix[16];
-
-        public Vec3 MultiplyVector(Vec3 vec)
-        {
-            float x = Matrix[0] * vec.x + Matrix[4] * vec.y + Matrix[8] * vec.z + Matrix[12];
-            float y = Matrix[1] * vec.x + Matrix[5] * vec.y + Matrix[9] * vec.z + Matrix[13];
-            float z = Matrix[2] * vec.x + Matrix[6] * vec.y + Matrix[10] * vec.z + Matrix[14];
-
-            return new Vec3(x, y, z);
-        }
 
         public Vec4 MultiplyVector(Vec4 vec)
         {

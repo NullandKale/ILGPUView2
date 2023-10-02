@@ -33,7 +33,7 @@ namespace GPU
 
         public static GPUMesh CreateCube()
         {
-            float scale = 0.5f;
+            float scale = 1.0f;
             // Define the 8 vertices of the cube
             Vec3[] vertices = new Vec3[]
             {
@@ -51,8 +51,8 @@ namespace GPU
             Triangle[] triangles = new Triangle[]
             {
             // Front face
-            new Triangle(vertices[0], vertices[2], vertices[1]),
-            new Triangle(vertices[2], vertices[0], vertices[3]),
+            new Triangle(vertices[0], vertices[1], vertices[2]),
+            new Triangle(vertices[2], vertices[3], vertices[0]),
             // Back face
             new Triangle(vertices[5], vertices[4], vertices[7]),
             new Triangle(vertices[7], vertices[6], vertices[5]),
@@ -109,6 +109,21 @@ namespace GPU
             }
 
             return new GPUMesh(triangles);
+        }
+
+        public void SetPos(float x, float y, float z)
+        {
+            this.pos = new Vec3(x, y, z);
+        }
+
+        public void SetRot(float xRotDegrees, float yRotDegrees, float zRotDegrees)
+        {
+            this.rotDegrees = new Vec3(xRotDegrees, yRotDegrees, zRotDegrees);
+        }
+
+        public void SetScale(float x, float y, float z)
+        {
+            this.scale = new Vec3(x, y, z);
         }
 
         public dMesh toGPU(GPU.Renderer gpu)
@@ -178,7 +193,7 @@ namespace GPU
 
         public void ApplyCamera(Mat4x4 cameraMatrix)
         {
-            matrix = modelMatrix * cameraMatrix;
+            this.matrix = cameraMatrix * modelMatrix;
         }
     }
 }

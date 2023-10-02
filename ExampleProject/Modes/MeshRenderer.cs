@@ -20,7 +20,7 @@ namespace ExampleProject.Modes
 {
     public class MeshRenderer : IRenderCallback
     {
-        private GPUMesh mesh;
+        private List<GPUMesh> meshes;
         private GPUFrameBuffer frameBuffer;
 
         public void CreateUI()
@@ -48,15 +48,27 @@ namespace ExampleProject.Modes
 
             if(frameBuffer != null)
             {
-                gpu.ExecuteTriangleFilterMany(frameBuffer, mesh, new DrawTrianglesTiled(gpu.ticks, 75, frameBuffer.width, frameBuffer.height, 0.1f, 1000));
+                gpu.ExecuteTriangleFilterMany(frameBuffer, meshes, new DrawTrianglesTiled(gpu.ticks, 75, frameBuffer.width, frameBuffer.height, 0.1f, 1000));
                 gpu.ExecuteFramebufferMask<FrameBufferCopy>(gpu.framebuffer, frameBuffer.toDevice(gpu));
             }
         }
 
         public void OnStart(GPU.Renderer gpu)
         {
-            mesh = GPUMesh.LoadObjTriangles("Assets/cat.obj");
-            //mesh = GPUMesh.CreateCube();
+            meshes = new List<GPUMesh>();
+
+            GPUMesh cat0 = GPUMesh.LoadObjTriangles("Assets/cat.obj");
+
+            GPUMesh cat1 = GPUMesh.LoadObjTriangles("Assets/cat.obj");
+            cat1.SetPos(0, 0, 2);
+
+            GPUMesh cube = GPUMesh.CreateCube();
+            cube.SetPos(0, 1.5f, 0);
+            //cube.SetScale(5, 1, 5);
+
+            meshes.Add(cat0);
+            meshes.Add(cat1);
+            meshes.Add(cube);
         }
 
         public void OnStop()

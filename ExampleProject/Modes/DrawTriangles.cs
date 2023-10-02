@@ -48,7 +48,7 @@ namespace ExampleProject.Modes
 
         public float GetDepthClearColor()
         {
-            return far;
+            return float.MaxValue;
         }
 
         public float GetFar()
@@ -102,11 +102,13 @@ namespace ExampleProject.Modes
             Vec4 v1 = mesh.matrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
             Vec4 v2 = mesh.matrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
 
-            Triangle t = new Triangle(
-                new Vec3(v0.x / v0.w, v0.y / v0.w, v0.z / v0.w),
-                new Vec3(v1.x / v1.w, v1.y / v1.w, v1.z / v1.w),
-                new Vec3(v2.x / v2.w, v2.y / v2.w, v2.z / v2.w)
-            );
+            float det3D = Vec3.cross(v1.xyz() - v0.xyz(), v2.xyz() - v0.xyz()).length();
+
+            Vec3 origV0 = new Vec3(v0.x, v0.y, v0.z);
+            Vec3 origV1 = new Vec3(v1.x, v1.y, v1.z);
+            Vec3 origV2 = new Vec3(v2.x, v2.y, v2.z);
+
+            Triangle t = new Triangle(origV0 / v0.w, origV1 / v1.w, origV2 / v2.w);
 
             Vec3 pv0 = new Vec3((t.v0.x + 1.0f) * width / 2f, (t.v0.y + 1.0f) * height / 2f, t.v0.z);
             Vec3 pv1 = new Vec3((t.v1.x + 1.0f) * width / 2f, (t.v1.y + 1.0f) * height / 2f, t.v1.z);
@@ -117,7 +119,7 @@ namespace ExampleProject.Modes
             float maxX = XMath.Max(pv0.x, XMath.Max(pv1.x, pv2.x));
             float maxY = XMath.Max(pv0.y, XMath.Max(pv1.y, pv2.y));
 
-            return new TransformedTriangle(t.v0, t.v1, t.v2, minX, minY, maxX, maxY);
+            return new TransformedTriangle(new Vec3(v0.w, v1.w, v2.w), t.v0, t.v1, t.v2, origV0, origV1, origV2, det3D, minX, minY, maxX, maxY);
         }
     }
 
