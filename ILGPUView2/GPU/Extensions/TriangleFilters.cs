@@ -12,6 +12,7 @@ using Camera;
 using System.Windows.Shapes;
 using System.Windows;
 using ILGPU.Algorithms;
+using System.Windows.Media.Media3D;
 
 namespace GPU
 {
@@ -54,88 +55,91 @@ namespace GPU
     public struct TransformedTriangle
     {
         public Vec3 wTerm;
-        public Vec3 v0;
-        public Vec3 v1;
-        public Vec3 v2;
+        public Vec3 v0, v1, v2;
+        //public Vec3 origV0, origV1, origV2;
+        //public float det3D;
+        public float minX, minY, maxX, maxY;
 
-        public Vec3 origV0;
-        public Vec3 origV1;
-        public Vec3 origV2;
+        // Bitwise flags to store state. 0 for OK, otherwise rejected for various reasons.
+        public int stateFlags;
 
-        public float det3D;
-
-        // Bounding box corners
-        public float minX;
-        public float minY;
-        public float maxX;
-        public float maxY;
-
-        public TransformedTriangle(Vec3 wTerm, Vec3 v0, Vec3 v1, Vec3 v2, Vec3 origV0, Vec3 origV1, Vec3 origV2, float det3D, float minX, float minY, float maxX, float maxY)
+        // v0, v1, v2 are all in camera space
+        // width and height are the framebuffer size
+        public TransformedTriangle(Vec4 v0, Vec4 v1, Vec4 v2, int width, int height)
         {
-            this.wTerm = wTerm;
-            this.v0 = v0;
-            this.v1 = v1;
-            this.v2 = v2;
-            this.origV0 = origV0;
-            this.origV1 = origV1;
-            this.origV2 = origV2;
-            this.det3D = det3D;
-            this.minX = minX;
-            this.minY = minY;
-            this.maxX = maxX;
-            this.maxY = maxY;
+            Vec3 origV0 = new Vec3(v0.x, v0.y, v0.z);
+            Vec3 origV1 = new Vec3(v1.x, v1.y, v1.z);
+            Vec3 origV2 = new Vec3(v2.x, v2.y, v2.z);
+
+            this.v0 = origV0 / v0.w;
+            this.v1 = origV1 / v1.w;
+            this.v2 = origV2 / v2.w;
+
+            float det3D = Vec3.cross(this.v1 - this.v0, this.v2 - this.v0).length();
+
+            wTerm = new Vec3(v0.w, v1.w, v2.w);
+
+            Vec3 pv0 = new Vec3((this.v0.x + 1.0f) * width / 2f, (this.v0.y + 1.0f) * height / 2f, this.v0.z);
+            Vec3 pv1 = new Vec3((this.v1.x + 1.0f) * width / 2f, (this.v1.y + 1.0f) * height / 2f, this.v1.z);
+            Vec3 pv2 = new Vec3((this.v2.x + 1.0f) * width / 2f, (this.v2.y + 1.0f) * height / 2f, this.v2.z);
+
+            minX = XMath.Min(pv0.x, XMath.Min(pv1.x, pv2.x));
+            minY = XMath.Min(pv0.y, XMath.Min(pv1.y, pv2.y));
+            maxX = XMath.Max(pv0.x, XMath.Max(pv1.x, pv2.x));
+            maxY = XMath.Max(pv0.y, XMath.Max(pv1.y, pv2.y));
+
+            // Initialize stateFlags to 0 (OK)
+            stateFlags = 0;
+
+            // If the triangle is behind the camera, set the 1st bit to 1.
+            if (origV0.z > 1 || origV1.z > 1 || origV2.z > 1)
+            {
+                stateFlags |= 1;
+            }
+
+            // If the triangle is backfacing, set the 2nd bit to 1.
+            if (det3D < 0)
+            {
+                stateFlags |= 2;
+            }
         }
     }
+
 
     public static partial class Kernels
     {
         private static void DrawTile<TFunc>(int tick, int xMin, int yMin, int xMax, int yMax, FrameBuffer output, dMesh mesh, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
-            float epsilon = ITriangleImageFilterTiled.tileSize * 200.0f;
+            float near = filter.GetNear();
+            float far = filter.GetFar();
+            float invFarNearDiff = 1.0f / (far - near);
+            float widthFactor = 2.0f / output.width;
+            float heightFactor = 2.0f / output.height;
 
             for (int i = 0; i < mesh.triangles.Length; i++)
             {
-                // Skip if the triangle is completely outside the tile
-                if (mesh.workingTriangles[i].maxX < xMin - epsilon || mesh.workingTriangles[i].minX > xMax + epsilon || mesh.workingTriangles[i].maxY < yMin - epsilon || mesh.workingTriangles[i].minY > yMax + epsilon)
+                TransformedTriangle workingTriangle = mesh.workingTriangles[i];
+
+                // Skip if any state flag is set.
+                if (workingTriangle.stateFlags != 0)
                 {
                     continue;
                 }
 
-                int minX = XMath.Max((int)XMath.Floor(mesh.workingTriangles[i].minX), xMin);
-                int minY = XMath.Max((int)XMath.Floor(mesh.workingTriangles[i].minY), yMin);
-                int maxX = XMath.Min((int)XMath.Ceiling(mesh.workingTriangles[i].maxX), xMax);
-                int maxY = XMath.Min((int)XMath.Ceiling(mesh.workingTriangles[i].maxY), yMax);
-
-                Vec3 v0 = mesh.workingTriangles[i].v0;
-                Vec3 v1 = mesh.workingTriangles[i].v1;
-                Vec3 v2 = mesh.workingTriangles[i].v2;
-
-                Vec3 origV0 = mesh.workingTriangles[i].origV0;
-                Vec3 origV1 = mesh.workingTriangles[i].origV1;
-                Vec3 origV2 = mesh.workingTriangles[i].origV2;
-
-                // Skip triangles that are entirely behind the camera
-
-                // this actually skips all the triangles in front of an plane about 1 unit in front of the camera
-                //if (origV0.z < 0 || origV1.z < 0 || origV2.z < 0)
-                //{
-                //    continue;
-                //}
-
-
-                float w0 = mesh.workingTriangles[i].wTerm.x;
-                float w1 = mesh.workingTriangles[i].wTerm.y;
-                float w2 = mesh.workingTriangles[i].wTerm.z;
-
-                float det3D = mesh.workingTriangles[i].det3D;
-
-                // this seems to work correctly
-                if (det3D < 0)
+                if (workingTriangle.maxX < xMin || workingTriangle.minX > xMax || workingTriangle.maxY < yMin || workingTriangle.minY > yMax)
                 {
                     continue;
                 }
 
-                // 2D determinants and inverse for screen-space barycentrics
+                int minX = XMath.Max((int)XMath.Floor(workingTriangle.minX), xMin);
+                int minY = XMath.Max((int)XMath.Floor(workingTriangle.minY), yMin);
+                int maxX = XMath.Min((int)XMath.Ceiling(workingTriangle.maxX), xMax);
+                int maxY = XMath.Min((int)XMath.Ceiling(workingTriangle.maxY), yMax);
+
+                Vec3 v0 = workingTriangle.v0;
+                Vec3 v1 = workingTriangle.v1;
+                Vec3 v2 = workingTriangle.v2;
+
                 float vec_x1 = v1.x - v0.x;
                 float vec_y1 = v1.y - v0.y;
                 float vec_x2 = v2.x - v0.x;
@@ -145,91 +149,32 @@ namespace GPU
 
                 for (int y = minY; y <= maxY; y++)
                 {
+                    float fy = y * heightFactor - 1.0f;
+
                     for (int x = minX; x <= maxX; x++)
                     {
-                        float fx = (float)x / output.width * 2.0f - 1.0f;
-                        float fy = (float)y / output.height * 2.0f - 1.0f;
-
+                        float fx = x * widthFactor - 1.0f;
                         float vec_px = fx - v0.x;
                         float vec_py = fy - v0.y;
 
-                        // 2D Screen-space barycentrics
                         float alpha = (vec_px * vec_y2 - vec_x2 * vec_py) * invDet;
                         float beta = (vec_x1 * vec_py - vec_px * vec_y1) * invDet;
                         float gamma = 1.0f - alpha - beta;
 
-                        // Interpolate 3D coordinates based on 2D barycentrics
-                        Vec3 interpolated3D = alpha * origV0 + beta * origV1 + gamma * origV2;
-
-                        Vec3 vecA = origV1 - origV0;
-                        Vec3 vecB = origV2 - origV0;
-                        Vec3 vecC = interpolated3D - origV0;
-
-                        Vec3 crossBC = Vec3.cross(vecB, vecC);
-                        Vec3 crossCA = Vec3.cross(vecC, vecA);
-                        Vec3 crossAB = Vec3.cross(vecA, vecB);
-
-                        float areaABC = Vec3.dot(vecA, Vec3.cross(vecB, vecC));
-                        float alpha3D = Vec3.dot(vecB, crossBC) / areaABC;
-                        float beta3D = Vec3.dot(vecC, crossCA) / areaABC;
-                        float gamma3D = Vec3.dot(vecA, crossAB) / areaABC;
-                        // END: Block to calculate 3D barycentric coordinates
-
-                        bool useNewMethod = false;
-
-                        if (useNewMethod)
+                        if (alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1)
                         {
-                            if (alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1)
+                            float depthValue = alpha * v0.z + beta * v1.z + gamma * v2.z;
+                            float interpolatedW = alpha * workingTriangle.wTerm.x + beta * workingTriangle.wTerm.y + gamma * workingTriangle.wTerm.z;
+
+                            float normalizedDepth = 1.0f - ((depthValue - near) * invFarNearDiff);
+
+                            if (interpolatedW > 0 && normalizedDepth < output.GetDepth(x, y))
                             {
-                                float depthValue = alpha * v0.z + beta * v1.z + gamma * v2.z;
-                                float interpolatedW = alpha3D * w0 + beta3D * w1 + gamma3D * w2;
-
-                                float normalizedDepth = 1.0f - ((depthValue - filter.GetNear()) / (filter.GetFar() - filter.GetNear()));
-
-                                RGBA32 debugColor;
-                                if (interpolatedW > 0)
-                                {
-                                    debugColor = new RGBA32(0, 255, 0, 255); // Green for w > 0
-                                }
-                                else
-                                {
-                                    debugColor = new RGBA32(255, 0, 0, 255); // Red for w <= 0
-                                }
-                                output.SetColorAt(x, y, debugColor);
-                                          // --------------------------------
-
-                                if (interpolatedW > 0 && normalizedDepth < output.GetDepth(x, y))
-                                {
-                                    output.SetDepthPixel(x, y, normalizedDepth);
-                                    RGBA32 color = filter.FragShader(x, y, mesh.workingTriangles[i], (float)i / (float)mesh.triangles.Length);
-                                    output.SetColorAt(x, y, color);
-                                }
+                                output.SetDepthPixel(x, y, normalizedDepth);
+                                RGBA32 color = filter.FragShader(x, y, workingTriangle, (float)i / (float)mesh.triangles.Length);
+                                output.SetColorAt(x, y, color);
                             }
                         }
-                        else
-                        {
-                            // this works but the output is weird, it seems like it draws parts of triangles that are behind the camera so they rasterize weird
-                            bool isInTriangle = (alpha >= 0 && alpha <= 1) &&
-                                                (beta >= 0 && beta <= 1) &&
-                                                (gamma >= 0 && gamma <= 1);
-
-                            if (isInTriangle)
-                            {
-                                float depthValue = (alpha * v0.z + beta * v1.z + gamma * v2.z);
-                                float normalizedDepth = 1.0f - ((depthValue - filter.GetNear()) / (filter.GetFar() - filter.GetNear()));
-
-                                if (normalizedDepth < output.GetDepth(x, y))
-                                {
-                                    output.SetDepthPixel(x, y, normalizedDepth);
-
-                                    RGBA32 color = filter.FragShader(x, y, mesh.workingTriangles[i], (float)i / (float)mesh.triangles.Length);
-                                    //RGBA32 color = new RGBA32(normalizedDepth, normalizedDepth, normalizedDepth);
-
-                                    output.SetColorAt(x, y, color);
-                                }
-                            }
-                        }
-
                     }
                 }
             }

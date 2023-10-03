@@ -15,6 +15,7 @@ using System.Reflection.Metadata;
 using System;
 using System.IO;
 using Camera;
+using System.Numerics;
 
 namespace ExampleProject.Modes
 {
@@ -57,18 +58,50 @@ namespace ExampleProject.Modes
         {
             meshes = new List<GPUMesh>();
 
-            GPUMesh cat0 = GPUMesh.LoadObjTriangles("Assets/cat.obj");
+            AddGridOfCubes(10, new Vec3(), 0.25f, new Vec3(0.1f, 0.1f, 0.1f));
+            AddConcentricCirclesOfCats(10, new Vec3(), 2.5f, new Vec3(0.5f, 0.5f, 0.5f));
+        }
 
-            GPUMesh cat1 = GPUMesh.LoadObjTriangles("Assets/cat.obj");
-            cat1.SetPos(0, 0, 2);
+        public void AddGridOfCubes(int count, Vec3 centerPos, float minDistBetweenObjects, Vec3 scale)
+        {
+            int sideCount = (int)Math.Sqrt(count);
+            float offset = minDistBetweenObjects;
+            float halfGrid = (sideCount - 1) * offset / 2.0f;  // Half the size of the grid
 
-            GPUMesh cube = GPUMesh.CreateCube();
-            cube.SetPos(0, 1.5f, 0);
-            //cube.SetScale(5, 1, 5);
+            for (int i = 0; i < sideCount; i++)
+            {
+                for (int j = 0; j < sideCount; j++)
+                {
+                    GPUMesh cube = GPUMesh.CreateCube();
+                    Vec3 position = new Vec3(centerPos.x + i * offset - halfGrid, centerPos.y, centerPos.z + j * offset - halfGrid);
+                    cube.SetPos(position.x, position.y, position.z);
+                    cube.SetScale(scale.x, scale.y, scale.z);
+                    meshes.Add(cube);
+                }
+            }
+        }
 
-            meshes.Add(cat0);
-            meshes.Add(cat1);
-            meshes.Add(cube);
+        public void AddConcentricCirclesOfCats(int count, Vec3 centerPos, float minDistBetweenObjects, Vec3 scale)
+        {
+            float angleIncrement = 360.0f / count;
+
+            for (int i = 1; i <= count; i++)
+            {
+                float angle = i * angleIncrement;
+                float x = centerPos.x + minDistBetweenObjects * (float)Math.Cos(Math.PI * angle / 180.0);
+                float z = centerPos.z + minDistBetweenObjects * (float)Math.Sin(Math.PI * angle / 180.0);
+
+                GPUMesh cat = GPUMesh.LoadObjTriangles("Assets/cat.obj");
+                cat.SetPos(x, centerPos.y, z);
+                cat.SetScale(scale.x, scale.y, scale.z);
+
+                // Rotate them to look at zero, they face Vec3(1, 0, 0);
+                // Assuming that rotation is done in Euler angles, and the initial facing direction is Vec3(1, 0, 0)
+                float yRotDegrees = -angle;
+                cat.SetRot(0, yRotDegrees, 0);
+
+                meshes.Add(cat);
+            }
         }
 
         public void OnStop()
