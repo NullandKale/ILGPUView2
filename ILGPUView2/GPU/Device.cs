@@ -49,9 +49,9 @@ namespace GPU
 
             context = Context.Create(builder => builder.CPU().Cuda().
                                                         EnableAlgorithms().
-                                                        Math(MathMode.Fast).
+                                                        Math(MathMode.Fast32BitOnly).
                                                         Inlining(InliningMode.Aggressive).
-                                                        Optimize(OptimizationLevel.O1));
+                                                        Optimize(OptimizationLevel.O0));
             device = context.GetPreferredDevice(preferCPU: debug).CreateAccelerator(context);
             kernels = new Dictionary<Type, object>();
 

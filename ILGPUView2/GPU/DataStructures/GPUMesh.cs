@@ -12,9 +12,11 @@ namespace GPU
 {
     public class GPUMesh
     {
-        private Vec3 pos;
-        private Vec3 rotDegrees;
-        private Vec3 scale;
+        public int TriangleCount;
+
+        public Vec3 pos;
+        public Vec3 rotDegrees;
+        public Vec3 scale;
 
         private Triangle[] trianglesCPU;
         private MemoryBuffer1D<Triangle, Stride1D.Dense> triangles;
@@ -29,6 +31,7 @@ namespace GPU
             pos = new Vec3(0, 0, 0);
             rotDegrees = new Vec3(0, 0, 0);
             scale = new Vec3(1, 1, 1);
+            this.TriangleCount = triangles.Count;
         }
 
         public static GPUMesh CreateCube()
@@ -114,6 +117,7 @@ namespace GPU
         public void SetPos(float x, float y, float z)
         {
             this.pos = new Vec3(x, y, z);
+
         }
 
         public void SetRot(float xRotDegrees, float yRotDegrees, float zRotDegrees)

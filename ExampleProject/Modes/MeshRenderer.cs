@@ -49,7 +49,15 @@ namespace ExampleProject.Modes
 
             if(frameBuffer != null)
             {
-                gpu.ExecuteTriangleFilterMany(frameBuffer, meshes, new DrawTrianglesTiled(gpu.ticks, 75, frameBuffer.width, frameBuffer.height, 0.1f, 1000));
+                float angle = ((gpu.ticks / 3.0f) % 360.0f) * (MathF.PI / 180.0f);
+                float camX = MathF.Sin(angle);
+                float camZ = MathF.Cos(angle);
+                Vec3 cameraPos = new Vec3(camX, -1f, camZ);
+                Vec3 up = new Vec3(0, 1, 0);
+                Vec3 lookAt = new Vec3(0, -0.35f, 0);
+
+
+                gpu.ExecuteTriangleFilterMany(frameBuffer, meshes, new DrawTrianglesTiled(cameraPos, up, lookAt, frameBuffer.width, frameBuffer.height, 75, 0.1f, 1000, gpu.ticks));
                 gpu.ExecuteFramebufferMask<FrameBufferCopy>(gpu.framebuffer, frameBuffer.toDevice(gpu));
             }
         }
@@ -58,8 +66,8 @@ namespace ExampleProject.Modes
         {
             meshes = new List<GPUMesh>();
 
-            AddGridOfCubes(10, new Vec3(), 0.25f, new Vec3(0.1f, 0.1f, 0.1f));
-            AddConcentricCirclesOfCats(10, new Vec3(), 2.5f, new Vec3(0.5f, 0.5f, 0.5f));
+            AddGridOfCubes(9, new Vec3(), 0.25f, new Vec3(0.1f, 0.1f, 0.1f));
+            AddConcentricCirclesOfCats(100, new Vec3(), 2.5f, new Vec3(0.1f, 0.1f, 0.1f));
         }
 
         public void AddGridOfCubes(int count, Vec3 centerPos, float minDistBetweenObjects, Vec3 scale)
