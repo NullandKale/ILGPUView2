@@ -69,7 +69,9 @@ namespace ExampleProject.Modes
             AddConcentricCirclesOfCats(1, new Vec3(), 0, new Vec3(1, 1, 1));
             AddConcentricCirclesOfCats(50, new Vec3(), 1.5f, new Vec3(0.3, 0.3, 0.3));
             AddConcentricCirclesOfCats(100, new Vec3(), 2.5f, new Vec3(0.1, 0.1, 0.1));
-            AddConcentricCirclesOfCats(100, new Vec3(), 5f, new Vec3(0.1, 0.1, 0.1));
+            AddConcentricCirclesOfCats(100, new Vec3(), 3f, new Vec3(0.1, 0.1, 0.1));
+            AddConcentricCirclesOfCats(150, new Vec3(), 3.5f, new Vec3(0.1, 0.1, 0.1));
+            AddConcentricCirclesOfCats(150, new Vec3(), 4f, new Vec3(0.1, 0.1, 0.1));
         }
 
         public void AddGridOfCubes(int count, Vec3 centerPos, float minDistBetweenObjects, Vec3 scale)

@@ -49,7 +49,7 @@ namespace GPU
 
             context = Context.Create(builder => builder.CPU().Cuda().
                                                         EnableAlgorithms().
-                                                        Math(MathMode.Fast32BitOnly).
+                                                        Math(MathMode.Default).
                                                         Inlining(InliningMode.Aggressive).
                                                         AutoAssertions().
                                                         Optimize(OptimizationLevel.O0));

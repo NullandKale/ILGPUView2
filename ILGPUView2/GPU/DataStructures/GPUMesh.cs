@@ -232,29 +232,42 @@ namespace GPU
     public class GPUMeshBatch
     {
         // To store multiple meshes in a flat structure
-        private List<Triangle> meshTrianglesCPU;
-        private List<dMeshTicket> meshTickets;
-        private List<(Vec3 pos, Vec3 rotDegrees, Vec3 scale)> transformations;
+        private Triangle[] meshTrianglesCPU;
+        private dMeshTicket[] meshTickets;
+        private (Vec3 pos, Vec3 rotDegrees, Vec3 scale)[] transformations;
 
         // GPU Buffers
         private MemoryBuffer1D<Triangle, Stride1D.Dense> triangles;
         private MemoryBuffer1D<TransformedTriangle, Stride1D.Dense> workingTriangles;
         private MemoryBuffer1D<dMeshTicket, Stride1D.Dense> meshTicketBuffer;
 
+        // Dirty flags
+        private bool isMeshTicketsDirty;
+        private bool isTrianglesDirty;
+
         public GPUMeshBatch()
         {
-            meshTrianglesCPU = new List<Triangle>();
-            meshTickets = new List<dMeshTicket>();
-            transformations = new List<(Vec3 pos, Vec3 rotDegrees, Vec3 scale)>();
+            meshTrianglesCPU = new Triangle[0];
+            meshTickets = new dMeshTicket[0];
+            transformations = new (Vec3 pos, Vec3 rotDegrees, Vec3 scale)[0];
         }
 
         public int AddMesh(GPUMesh mesh)
         {
-            int startIndex = meshTrianglesCPU.Count;
-            meshTrianglesCPU.AddRange(mesh.trianglesCPU);
-            transformations.Add((mesh.pos, mesh.rotDegrees, mesh.scale));
-            int meshIndex = meshTickets.Count;
-            meshTickets.Add(new dMeshTicket(meshIndex, startIndex, mesh.trianglesCPU.Length, default, default));
+            int startIndex = meshTrianglesCPU.Length;
+            Array.Resize(ref meshTrianglesCPU, meshTrianglesCPU.Length + mesh.trianglesCPU.Length);
+            Array.Copy(mesh.trianglesCPU, 0, meshTrianglesCPU, startIndex, mesh.trianglesCPU.Length);
+
+            int meshIndex = meshTickets.Length;
+            Array.Resize(ref transformations, transformations.Length + 1);
+            transformations[meshIndex] = (mesh.pos, mesh.rotDegrees, mesh.scale);
+
+            Array.Resize(ref meshTickets, meshTickets.Length + 1);
+            meshTickets[meshIndex] = new dMeshTicket(meshIndex, startIndex, mesh.trianglesCPU.Length, default, default);
+
+            isMeshTicketsDirty = true;
+            isTrianglesDirty = true;
+
             return meshIndex;
         }
 
@@ -285,7 +298,9 @@ namespace GPU
 
         public void ApplyCamera(Mat4x4 cameraMatrix)
         {
-            for (int i = 0; i < meshTickets.Count; ++i)
+            isMeshTicketsDirty = true;
+
+            for (int i = 0; i < meshTickets.Length; ++i)
             {
                 UpdateMeshTicket(i);
                 var modelMatrix = meshTickets[i].modelMatrix;
@@ -297,21 +312,32 @@ namespace GPU
         public dMeshBatch toGPU(GPU.Renderer gpu)
         {
             // Check if GPU memory needs to be reallocated
-            if (triangles == null || triangles.Length != meshTrianglesCPU.Count)
+            if (triangles == null || triangles.Length != meshTrianglesCPU.Length || isTrianglesDirty)
             {
                 triangles?.Dispose();
                 workingTriangles?.Dispose();
                 meshTicketBuffer?.Dispose();
 
-                triangles = gpu.device.Allocate1D(meshTrianglesCPU.ToArray());
-                workingTriangles = gpu.device.Allocate1D<TransformedTriangle>(meshTrianglesCPU.Count);
-                meshTicketBuffer = gpu.device.Allocate1D(meshTickets.ToArray());
+                triangles = gpu.device.Allocate1D(meshTrianglesCPU);
+                workingTriangles = gpu.device.Allocate1D<TransformedTriangle>(meshTrianglesCPU.Length);
+                meshTicketBuffer = gpu.device.Allocate1D(meshTickets);
+
+                isTrianglesDirty = false;
+                isMeshTicketsDirty = false;
             }
             else
             {
-                // If already allocated, just update the data
-                triangles.CopyFromCPU(meshTrianglesCPU.ToArray());
-                meshTicketBuffer.CopyFromCPU(meshTickets.ToArray());
+                if (isTrianglesDirty)
+                {
+                    triangles.CopyFromCPU(meshTrianglesCPU);
+                    isTrianglesDirty = false;
+                }
+
+                if (isMeshTicketsDirty)
+                {
+                    meshTicketBuffer.CopyFromCPU(meshTickets);
+                    isMeshTicketsDirty = false;
+                }
             }
 
             return new dMeshBatch(triangles, workingTriangles, meshTicketBuffer);
