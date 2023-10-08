@@ -21,13 +21,48 @@ namespace ExampleProject.Modes
 {
     public class MeshRenderer : IRenderCallback
     {
+        private GLTFLoader loader;
         private GPUMeshBatch meshes;
         private GPUFrameBuffer frameBuffer;
+        private float fov = 75;
+
+        bool initialized;
 
         public void CreateUI()
         {
+            // this could be better
+            string rootDirectory = @"..\..\..\Assets\glTF-Sample-Models\2.0\";
+            GLTFLoader loader = new GLTFLoader(rootDirectory);
+
             UIBuilder.Clear();
             UIBuilder.AddLabel("Debug Renderer");
+
+            List<string> gltfs = loader.ListAvailableGLTFs();
+            List<string> names = loader.ListAvailableGLTFNames();
+
+            UIBuilder.AddLabel("This might crash your computer, some of these are untested, and most gltf features are unsupported");
+            UIBuilder.AddDropdown(names.ToArray(), (selected) =>
+            {
+                try
+                {
+                    var newMeshes = loader.LoadGLTF(gltfs[selected]);
+                    if (newMeshes != null && newMeshes.triangleCount > 0)
+                    {
+                        meshes = newMeshes;
+                    }
+                }
+                catch 
+                {
+                    
+                }
+                
+            });
+
+            var fovLabel = UIBuilder.AddLabel("");
+            UIBuilder.AddSlider(fovLabel, "FOV: ", 1, 115, 75, (val) =>
+            {
+                fov = val;
+            });
         }
 
         public void OnKeyPressed(Key key, ModifierKeys modifiers)
@@ -52,12 +87,12 @@ namespace ExampleProject.Modes
                 float angle = ((gpu.ticks / 3.0f) % 360.0f) * (MathF.PI / 180.0f);
                 float camX = MathF.Sin(angle);
                 float camZ = MathF.Cos(angle);
-                Vec3 cameraPos = new Vec3(camX, -1f, camZ);
+                Vec3 cameraPos = new Vec3(camX, 0, camZ);
                 Vec3 up = new Vec3(0, 1, 0);
-                Vec3 lookAt = new Vec3(0, -0.35f, 0);
+                Vec3 lookAt = new Vec3(0, 0, 0);
 
 
-                gpu.ExecuteTriangleFilterMany(frameBuffer, meshes, new DrawTrianglesTiled(cameraPos, up, lookAt, frameBuffer.width, frameBuffer.height, 75, 0.1f, 1000, gpu.ticks));
+                gpu.ExecuteTriangleFilterMany(frameBuffer, meshes, new DrawTrianglesTiled(cameraPos, up, lookAt, frameBuffer.width, frameBuffer.height, fov, 0.1f, 1000, gpu.ticks));
                 gpu.ExecuteFramebufferMask<FrameBufferCopy>(gpu.framebuffer, frameBuffer.toDevice(gpu));
             }
         }
@@ -67,11 +102,12 @@ namespace ExampleProject.Modes
             meshes = new GPUMeshBatch();
 
             AddConcentricCirclesOfCats(1, new Vec3(), 0, new Vec3(1, 1, 1));
-            AddConcentricCirclesOfCats(50, new Vec3(), 1.5f, new Vec3(0.3, 0.3, 0.3));
-            AddConcentricCirclesOfCats(100, new Vec3(), 2.5f, new Vec3(0.1, 0.1, 0.1));
-            AddConcentricCirclesOfCats(100, new Vec3(), 3f, new Vec3(0.1, 0.1, 0.1));
-            AddConcentricCirclesOfCats(150, new Vec3(), 3.5f, new Vec3(0.1, 0.1, 0.1));
-            AddConcentricCirclesOfCats(150, new Vec3(), 4f, new Vec3(0.1, 0.1, 0.1));
+            AddConcentricCirclesOfCats(25, new Vec3(), 1.5f, new Vec3(0.3, 0.3, 0.3));
+            //AddConcentricCirclesOfCats(50, new Vec3(), 2f, new Vec3(0.3, 0.3, 0.3));
+            //AddConcentricCirclesOfCats(100, new Vec3(), 2.5f, new Vec3(0.1, 0.1, 0.1));
+            //AddConcentricCirclesOfCats(100, new Vec3(), 3f, new Vec3(0.1, 0.1, 0.1));
+            //AddConcentricCirclesOfCats(150, new Vec3(), 3.5f, new Vec3(0.1, 0.1, 0.1));
+            //AddConcentricCirclesOfCats(150, new Vec3(), 4f, new Vec3(0.1, 0.1, 0.1));
         }
 
         public void AddGridOfCubes(int count, Vec3 centerPos, float minDistBetweenObjects, Vec3 scale)
@@ -104,7 +140,7 @@ namespace ExampleProject.Modes
                 float z = centerPos.z + minDistBetweenObjects * (float)Math.Sin(Math.PI * angle / 180.0);
 
                 GPUMesh cat = GPUMesh.LoadObjTriangles("Assets/cat.obj");
-                cat.SetPos(x, centerPos.y, z);
+                cat.SetPos(x, centerPos.y + (scale.y * 2), z);
                 cat.SetScale(scale.x, scale.y, scale.z);
 
                 // Rotate them to look at zero, they face Vec3(1, 0, 0);

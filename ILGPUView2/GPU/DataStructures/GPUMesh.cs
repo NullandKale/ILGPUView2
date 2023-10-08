@@ -7,9 +7,68 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using SharpGLTF.Schema2;
 
 namespace GPU
 {
+    public class GLTFLoader
+    {
+        private readonly string rootDirectory;
+
+        public GLTFLoader(string rootDirectory)
+        {
+            this.rootDirectory = rootDirectory;
+        }
+
+        public List<string> ListAvailableGLTFs()
+        {
+            List<string> availableFiles = new List<string>();
+
+            // Get all subdirectories under the root directory
+            string[] subdirectories = Directory.GetDirectories(rootDirectory);
+
+            foreach (string subdir in subdirectories)
+            {
+                // Check if the subdirectory contains a glTF folder
+                string gltfFolder = Path.Combine(subdir, "glTF");
+                if (Directory.Exists(gltfFolder))
+                {
+                    // List all glTF files within the glTF folder
+                    string[] gltfFiles = Directory.GetFiles(gltfFolder, "*.gltf");
+                    availableFiles.AddRange(gltfFiles);
+                }
+            }
+
+            return availableFiles;
+        }
+
+        public List<string> ListAvailableGLTFNames()
+        {
+            List<string> availableNames = new List<string>();
+
+            string[] subdirectories = Directory.GetDirectories(rootDirectory);
+            foreach (string subdir in subdirectories)
+            {
+                string folderName = new DirectoryInfo(subdir).Name;
+                string gltfFolder = Path.Combine(subdir, "glTF");
+                if (Directory.Exists(gltfFolder))
+                {
+                    availableNames.Add(folderName);
+                }
+            }
+
+            return availableNames;
+        }
+
+
+        public GPUMeshBatch LoadGLTF(string gltfFilePath)
+        {
+            GPUMeshBatch meshBatch = new GPUMeshBatch();
+            meshBatch.LoadGLTF(gltfFilePath);
+            return meshBatch;
+        }
+    }
+
     public class GPUMesh
     {
         public int TriangleCount;
@@ -231,6 +290,7 @@ namespace GPU
     // represents all the meshs on the CPU
     public class GPUMeshBatch
     {
+        public int triangleCount = 0;
         // To store multiple meshes in a flat structure
         private Triangle[] meshTrianglesCPU;
         private dMeshTicket[] meshTickets;
@@ -267,8 +327,51 @@ namespace GPU
 
             isMeshTicketsDirty = true;
             isTrianglesDirty = true;
+            triangleCount = meshTrianglesCPU.Length;
 
             return meshIndex;
+        }
+
+        public void LoadGLTF(string filename)
+        {
+            var model = ModelRoot.Load(filename);
+
+            foreach (var mesh in model.LogicalMeshes)
+            {
+                foreach (var primitive in mesh.Primitives)
+                {
+                    var positionAccessor = primitive.GetVertices("POSITION");
+                    var positionsList = positionAccessor.AsVector3Array();
+                    var indicesAccessor = primitive.GetIndices();
+
+                    var vertices = new List<Vec3>();
+                    for (int i = 0; i < positionsList.Count(); ++i)
+                    {
+                        var vertex = positionsList[i];
+                        vertices.Add(new Vec3(vertex.X, vertex.Y, vertex.Z));
+                    }
+
+                    var indices = new int[indicesAccessor.Count];
+                    for (int i = 0; i < indicesAccessor.Count; ++i)
+                    {
+                        indices[i] = (int)indicesAccessor.ElementAt(i);
+                    }
+
+                    var triangles = new List<Triangle>();
+                    for (int i = 0; i < indices.Length; i += 3)
+                    {
+                        var v1 = vertices[indices[i]];
+                        var v2 = vertices[indices[i + 1]];
+                        var v3 = vertices[indices[i + 2]];
+
+                        triangles.Add(new Triangle(v1, v2, v3));
+                    }
+
+                    var gpuMesh = new GPUMesh(triangles);
+                    gpuMesh.SetScale(0.1f, 0.1f, 0.1f);
+                    this.AddMesh(gpuMesh);
+                }
+            }
         }
 
         public void SetPos(int meshID, float x, float y, float z)

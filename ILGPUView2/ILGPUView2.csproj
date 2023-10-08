@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="ILGPU" Version="1.5.1" />
     <PackageReference Include="ILGPU.Algorithms" Version="1.5.1" />
+    <PackageReference Include="SharpGLTF.Core" Version="1.0.0-alpha0030" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.0-rc.1.23419.5" />
   </ItemGroup>
 
