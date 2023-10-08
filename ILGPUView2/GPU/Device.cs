@@ -51,6 +51,7 @@ namespace GPU
                                                         EnableAlgorithms().
                                                         Math(MathMode.Fast32BitOnly).
                                                         Inlining(InliningMode.Aggressive).
+                                                        AutoAssertions().
                                                         Optimize(OptimizationLevel.O0));
             device = context.GetPreferredDevice(preferCPU: debug).CreateAccelerator(context);
             kernels = new Dictionary<Type, object>();
