@@ -359,7 +359,7 @@ namespace GPU
                             float interpolatedW = alpha * workingTriangle.wTerm.x + beta * workingTriangle.wTerm.y + gamma * workingTriangle.wTerm.z;
 
                             float normalizedDepth = 1.0f - ((depthValue - near) * invFarNearDiff);
-                            float currentDepth = float.MaxValue;
+                            float currentDepth = output.GetDepth(x,y);
                             if (interpolatedW > 0 && normalizedDepth < currentDepth)
                             {
                                 output.SetDepthPixel(x, y, normalizedDepth);
@@ -367,6 +367,10 @@ namespace GPU
                                 //RGBA32 color = new RGBA32(normalizedDepth, normalizedDepth, normalizedDepth);
                                 //RGBA32 color = new RGBA32(depthValue, depthValue, depthValue);
                                 output.SetColorAt(x, y, color);
+                            }
+                            else
+                            {
+                                //output.SetDepthPixel(x, y, normalizedDepth);
                             }
                         }
                     }
