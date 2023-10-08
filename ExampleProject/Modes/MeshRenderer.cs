@@ -21,7 +21,7 @@ namespace ExampleProject.Modes
 {
     public class MeshRenderer : IRenderCallback
     {
-        private List<GPUMesh> meshes;
+        private GPUMeshBatch meshes;
         private GPUFrameBuffer frameBuffer;
 
         public void CreateUI()
@@ -64,7 +64,7 @@ namespace ExampleProject.Modes
 
         public void OnStart(GPU.Renderer gpu)
         {
-            meshes = new List<GPUMesh>();
+            meshes = new GPUMeshBatch();
 
             AddGridOfCubes(9, new Vec3(), 0.75f, new Vec3(0.4f, 0.4f, 0.4f));
             AddConcentricCirclesOfCats(10, new Vec3(), 2.5f, new Vec3(1, 1, 1));
@@ -84,7 +84,7 @@ namespace ExampleProject.Modes
                     Vec3 position = new Vec3(centerPos.x + i * offset - halfGrid, centerPos.y, centerPos.z + j * offset - halfGrid);
                     cube.SetPos(position.x, position.y, position.z);
                     cube.SetScale(scale.x, scale.y, scale.z);
-                    meshes.Add(cube);
+                    meshes.AddMesh(cube);
                 }
             }
         }
@@ -108,7 +108,7 @@ namespace ExampleProject.Modes
                 float yRotDegrees = -angle;
                 cat.SetRot(0, yRotDegrees, 0);
 
-                meshes.Add(cat);
+                meshes.AddMesh(cat);
             }
         }
 

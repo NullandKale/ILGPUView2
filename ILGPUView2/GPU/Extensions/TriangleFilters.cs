@@ -73,11 +73,11 @@ namespace GPU
         }
 
 
-        public TransformedTriangle VertShader(Triangle original, dMesh mesh, int width, int height)
+        public TransformedTriangle VertShader(Triangle original, Mat4x4 matrix, int width, int height)
         {
-            Vec4 v0 = mesh.matrix.MultiplyVector(new Vec4(original.v0.x, original.v0.y, original.v0.z, 1.0f));
-            Vec4 v1 = mesh.matrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
-            Vec4 v2 = mesh.matrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
+            Vec4 v0 = matrix.MultiplyVector(new Vec4(original.v0.x, original.v0.y, original.v0.z, 1.0f));
+            Vec4 v1 = matrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
+            Vec4 v2 = matrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
 
             return new TransformedTriangle(v0, v1, v2, width, height);
         }
@@ -110,7 +110,7 @@ namespace GPU
     public interface IVertShader
     {
         // Vertex shader function
-        TransformedTriangle VertShader(Triangle original, dMesh mesh, int width, int height);
+        TransformedTriangle VertShader(Triangle original, Mat4x4 matrix, int width, int height);
     }
 
     // defines a shader
@@ -205,7 +205,7 @@ namespace GPU
         public static void TransformTrianglesKernel<TFunc>(Index1D index, int threadCount, dMesh mesh, TFunc filter, int width, int height) where TFunc : unmanaged, IVertShader
         {
             Triangle original = mesh.triangles[index];
-            TransformedTriangle transformed = filter.VertShader(original, mesh, width, height);
+            TransformedTriangle transformed = filter.VertShader(original, mesh.matrix, width, height);
             mesh.workingTriangles[index] = transformed;
         }
 
@@ -296,7 +296,7 @@ namespace GPU
             }
         }
 
-        public static void TriangleImageFilterManyTileCacheKernel<TFunc>(Index1D index, int threadCount, int meshID, FrameBuffer output, dMesh mesh, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
+        public static void TriangleImageFilterManyTileCacheKernel<TFunc>(Index1D index, int threadCount, FrameBuffer output, dMeshBatch meshes, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             int startX = (index.X % (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
             int startY = (index.X / (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
@@ -316,14 +316,7 @@ namespace GPU
             for (int i = 0; i < count; i++)
             {
                 TileTriangleRecord triangleRecord = perTileTriangleArray[linearIndex + i];
-
-                // currently this kernel is called once per mesh, we need to fix this
-                if(triangleRecord.meshID != meshID)
-                {
-                    continue;
-                }
-
-                TransformedTriangle workingTriangle = mesh.workingTriangles[triangleRecord.triangleIndex];
+                TransformedTriangle workingTriangle = meshes.GetWorkingTriangle(triangleRecord.meshID, triangleRecord.triangleIndex);
 
                 if (workingTriangle.maxX < startX || workingTriangle.minX > endX || workingTriangle.maxY < startY || workingTriangle.minY > endY)
                 {
@@ -366,11 +359,11 @@ namespace GPU
                             float interpolatedW = alpha * workingTriangle.wTerm.x + beta * workingTriangle.wTerm.y + gamma * workingTriangle.wTerm.z;
 
                             float normalizedDepth = 1.0f - ((depthValue - near) * invFarNearDiff);
-
-                            if (interpolatedW > 0 && normalizedDepth < output.GetDepth(x, y))
+                            float currentDepth = float.MaxValue;
+                            if (interpolatedW > 0 && normalizedDepth < currentDepth)
                             {
                                 output.SetDepthPixel(x, y, normalizedDepth);
-                                RGBA32 color = filter.FragShader(x, y, workingTriangle, (float)triangleRecord.triangleIndex / (float)mesh.triangles.Length);
+                                RGBA32 color = filter.FragShader(x, y, workingTriangle, (float)triangleRecord.triangleIndex);
                                 //RGBA32 color = new RGBA32(normalizedDepth, normalizedDepth, normalizedDepth);
                                 //RGBA32 color = new RGBA32(depthValue, depthValue, depthValue);
                                 output.SetColorAt(x, y, color);
@@ -429,11 +422,13 @@ namespace GPU
 
 
         // width and height are in pixels not tiless
-        public static void TransformTrianglesKernel<TFunc>(Index1D index, int meshID, dMesh mesh, TFunc filter, int width, int height, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount) where TFunc : unmanaged, IVertShader
+        public static void TransformTrianglesKernel<TFunc>(Index1D index, dMeshBatch meshes, TFunc filter, int width, int height, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount) where TFunc : unmanaged, IVertShader
         {
-            Triangle original = mesh.triangles[index];
-            TransformedTriangle transformed = filter.VertShader(original, mesh, width, height);
-            mesh.workingTriangles[index] = transformed;
+            // index is the thread index its there is one per triangle
+            dMeshTicket currentMesh = meshes.GetMeshTicketByTriangleIndex(index);
+            Triangle original = meshes.GetTriangle(index);
+            TransformedTriangle transformed = filter.VertShader(original, currentMesh.matrix, width, height);
+            meshes.SetWorkingTriangle(index, transformed);
 
             if (transformed.stateFlags != 0)
             {
@@ -469,7 +464,7 @@ namespace GPU
                             // Calculate the linear index for this tile and triangle within perTileTriangleArray
                             int linearIndex = tileIndex * TileCache.maxTrianglesPerTile + currentCount;
 
-                            perTileTriangleArray[linearIndex] = new TileTriangleRecord(meshID, index);
+                            perTileTriangleArray[linearIndex] = new TileTriangleRecord(currentMesh.meshIndex, meshes.GetLocalIndexByTriangleIndex(index));
                         }
                     }
                 }
@@ -497,7 +492,7 @@ namespace GPU
         private TileCache tileCache;
 
         // this function draws multiple meshes to the output with the shader ITriangleImageFilterTiled on the gpu
-        public void ExecuteTriangleFilterMany<TFunc>(GPUFrameBuffer output, List<GPUMesh> meshes, TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
+        public void ExecuteTriangleFilterMany<TFunc>(GPUFrameBuffer output, GPUMeshBatch meshes, TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             int widthInTiles = output.width / ITriangleImageFilterTiled.tileSize;
             int heightInTiles = output.height / ITriangleImageFilterTiled.tileSize;
@@ -517,44 +512,44 @@ namespace GPU
             }
 
             var transformKernel = GetTileCacheTransformTrianglesKernel(filter);
-            //var transformKernel = GetTransformTrianglesKernel(filter);
-
             var drawKernel = GetTriangleImageFilterManyTileCacheKernel(filter);
-            //var drawKernel = GetTriangleImageFilterManyKernel(filter);
-
             var clearKernel = GetClearFrameBufferKernel(filter);
 
             FrameBuffer framebuffer = output.toDevice(this);
 
             (ArrayView1D<TileTriangleRecord, Stride1D.Dense> tileTriangles, ArrayView1D<int, Stride1D.Dense > tileTriangleCounts) = tileCache.GetCache();
+            
+            meshes.ApplyCamera(filter.GetCameraMat());
+            dMeshBatch deviceMeshes = meshes.toGPU(this);
 
-            // clear pass
             clearKernel(numTiles, framebuffer, filter);
-
-            for (int i = 0; i < meshes.Count; i++)
-            {
-                GPUMesh mesh = meshes[i];
-                dMesh deviceMesh = mesh.toGPU(this);
-                deviceMesh.ApplyCamera(filter.GetCameraMat());
-
-                int numTriangles = mesh.TriangleCount; // Assuming you have a way to get the number of triangles in a mesh
-
-                // Transform triangles for each mesh, one thread per triangle
-                //transformKernel(numTriangles, i, deviceMesh, filter, output.width, output.height);
-                transformKernel(numTriangles, i, deviceMesh, filter, output.width, output.height, tileTriangles, tileTriangleCounts);
-
-            }
-
-            for (int i = 0; i < meshes.Count; i++)
-            {
-                GPUMesh mesh = meshes[i];
-                dMesh deviceMesh = mesh.toGPU(this);
-
-                // draw pass for each mesh
-                drawKernel(numTiles, numTiles, i, framebuffer, deviceMesh, tileTriangles, tileTriangleCounts, filter);
-            }
+            transformKernel(deviceMeshes.triangles.IntLength, deviceMeshes, filter, output.width, output.height, tileTriangles, tileTriangleCounts);
+            drawKernel(numTiles, numTiles, framebuffer, deviceMeshes, tileTriangles, tileTriangleCounts, filter);
         }
 
+
+        // this caches the gpu kernel for the vert shader kernel for each shader
+        private Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc> GetTriangleImageFilterManyTileCacheKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>(TriangleImageFilterManyTileCacheKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> GetTileCacheTransformTrianglesKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVertShader
+        {
+            if (!kernels.ContainsKey(typeof(TileCache)))
+            {
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>(TileCache.TransformTrianglesKernel);
+                kernels.Add(typeof(TileCache), kernel);
+            }
+
+            return (Action<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>)kernels[typeof(TileCache)];
+        }
 
 
         // this caches the gpu kernel for each shader
@@ -569,17 +564,6 @@ namespace GPU
             return (Action<Index1D, int, int, FrameBuffer, dMesh, TFunc>)kernels[filter.GetType()];
         }
 
-        private Action<Index1D, int, int, FrameBuffer, dMesh, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc> GetTriangleImageFilterManyTileCacheKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
-        {
-            if (!kernels.ContainsKey(filter.GetType()))
-            {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, int, FrameBuffer, dMesh, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>(TriangleImageFilterManyTileCacheKernel);
-                kernels.Add(filter.GetType(), kernel);
-            }
-
-            return (Action<Index1D, int, int, FrameBuffer, dMesh, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>)kernels[filter.GetType()];
-        }
-
         // this caches the gpu kernel for the clear frame kernel for each shader
         private Action<Index1D, FrameBuffer, TFunc> GetClearFrameBufferKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IClearFramebuffer
         {
@@ -590,18 +574,6 @@ namespace GPU
             }
 
             return (Action<Index1D, FrameBuffer, TFunc>)kernels[typeof(IClearFramebuffer)];
-        }
-
-        // this caches the gpu kernel for the vert shader kernel for each shader
-        private Action<Index1D, int, dMesh, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> GetTileCacheTransformTrianglesKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVertShader
-        {
-            if (!kernels.ContainsKey(typeof(TileCache)))
-            {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dMesh, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>(TileCache.TransformTrianglesKernel);
-                kernels.Add(typeof(TileCache), kernel);
-            }
-
-            return (Action<Index1D, int, dMesh, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>)kernels[typeof(TileCache)];
         }
 
         // this caches the gpu kernel for the vert shader kernel for each shader

@@ -14,16 +14,18 @@ namespace GPU
     {
         public int TriangleCount;
 
+        // store data for model matrix
+        // we will need lists of these for the GPUMeshBatch to store the model transform
         public Vec3 pos;
         public Vec3 rotDegrees;
         public Vec3 scale;
 
-        private Triangle[] trianglesCPU;
-        private MemoryBuffer1D<Triangle, Stride1D.Dense> triangles;
-        private MemoryBuffer1D<TransformedTriangle, Stride1D.Dense> workingTriangles;
+        public Triangle[] trianglesCPU;
+        public MemoryBuffer1D<Triangle, Stride1D.Dense> triangles;
+        public MemoryBuffer1D<TransformedTriangle, Stride1D.Dense> workingTriangles;
 
-        private bool cpuDirty = false;
-        private bool gpuDirty = false;
+        public bool cpuDirty = false;
+        public bool gpuDirty = false;
 
         public GPUMesh(List<Triangle> triangles)
         {
@@ -114,17 +116,20 @@ namespace GPU
             return new GPUMesh(triangles);
         }
 
+        // model position
         public void SetPos(float x, float y, float z)
         {
             this.pos = new Vec3(x, y, z);
 
         }
 
+        // model rotate
         public void SetRot(float xRotDegrees, float yRotDegrees, float zRotDegrees)
         {
             this.rotDegrees = new Vec3(xRotDegrees, yRotDegrees, zRotDegrees);
         }
 
+        // model scale
         public void SetScale(float x, float y, float z)
         {
             this.scale = new Vec3(x, y, z);
@@ -189,15 +194,250 @@ namespace GPU
 
         public dMesh(Vec3 pos, Vec3 rotDegrees, Vec3 scale, ArrayView1D<Triangle, Stride1D.Dense> triangles, ArrayView1D<TransformedTriangle, Stride1D.Dense> workingTriangles)
         {
+            // create the model matrix
             this.modelMatrix = Mat4x4.CreateModelMatrix(pos, rotDegrees, scale);
 
             this.triangles = triangles;
             this.workingTriangles = workingTriangles;
         }
 
+        // we will need a batch version of this in GPUMeshBatch NOT in dMeshBatch or dMeshTicket because we store these in a memorybuffer / arrayview
         public void ApplyCamera(Mat4x4 cameraMatrix)
         {
+            // apply a camera matrix
             this.matrix = cameraMatrix * modelMatrix;
+        }
+    }
+
+    // represents a single mesh from a batch on the GPU
+    public struct dMeshTicket
+    {
+        public int StartIndex;
+        public int TriangleCount;
+        public Mat4x4 matrix;
+        public Mat4x4 modelMatrix;
+        public int meshIndex; // index in the dMeshTicket arrays
+
+        public dMeshTicket(int meshIndex, int startIndex, int triangleCount, Mat4x4 matrix, Mat4x4 modelMatrix)
+        {
+            this.meshIndex = meshIndex;
+            this.StartIndex = startIndex;
+            this.TriangleCount = triangleCount;
+            this.matrix = matrix;
+            this.modelMatrix = modelMatrix;
+        }
+    }
+
+    // represents all the meshs on the CPU
+    public class GPUMeshBatch
+    {
+        // To store multiple meshes in a flat structure
+        private List<Triangle> meshTrianglesCPU;
+        private List<dMeshTicket> meshTickets;
+        private List<(Vec3 pos, Vec3 rotDegrees, Vec3 scale)> transformations;
+
+        // GPU Buffers
+        private MemoryBuffer1D<Triangle, Stride1D.Dense> triangles;
+        private MemoryBuffer1D<TransformedTriangle, Stride1D.Dense> workingTriangles;
+        private MemoryBuffer1D<dMeshTicket, Stride1D.Dense> meshTicketBuffer;
+
+        public GPUMeshBatch()
+        {
+            meshTrianglesCPU = new List<Triangle>();
+            meshTickets = new List<dMeshTicket>();
+            transformations = new List<(Vec3 pos, Vec3 rotDegrees, Vec3 scale)>();
+        }
+
+        public int AddMesh(GPUMesh mesh)
+        {
+            int startIndex = meshTrianglesCPU.Count;
+            meshTrianglesCPU.AddRange(mesh.trianglesCPU);
+            transformations.Add((mesh.pos, mesh.rotDegrees, mesh.scale));
+            int meshIndex = meshTickets.Count;
+            meshTickets.Add(new dMeshTicket(meshIndex, startIndex, mesh.trianglesCPU.Length, default, default));
+            return meshIndex;
+        }
+
+        public void SetPos(int meshID, float x, float y, float z)
+        {
+            transformations[meshID] = (new Vec3(x, y, z), transformations[meshID].rotDegrees, transformations[meshID].scale);
+            UpdateMeshTicket(meshID);
+        }
+
+        public void SetRot(int meshID, float xRotDegrees, float yRotDegrees, float zRotDegrees)
+        {
+            transformations[meshID] = (transformations[meshID].pos, new Vec3(xRotDegrees, yRotDegrees, zRotDegrees), transformations[meshID].scale);
+            UpdateMeshTicket(meshID);
+        }
+
+        public void SetScale(int meshID, float x, float y, float z)
+        {
+            transformations[meshID] = (transformations[meshID].pos, transformations[meshID].rotDegrees, new Vec3(x, y, z));
+            UpdateMeshTicket(meshID);
+        }
+
+        private void UpdateMeshTicket(int meshID)
+        {
+            var (pos, rotDegrees, scale) = transformations[meshID];
+            var modelMatrix = Mat4x4.CreateModelMatrix(pos, rotDegrees, scale);
+            meshTickets[meshID] = new dMeshTicket(meshID, meshTickets[meshID].StartIndex, meshTickets[meshID].TriangleCount, meshTickets[meshID].matrix, modelMatrix);
+        }
+
+        public void ApplyCamera(Mat4x4 cameraMatrix)
+        {
+            for (int i = 0; i < meshTickets.Count; ++i)
+            {
+                UpdateMeshTicket(i);
+                var modelMatrix = meshTickets[i].modelMatrix;
+                var matrix = cameraMatrix * modelMatrix;
+                meshTickets[i] = new dMeshTicket(i, meshTickets[i].StartIndex, meshTickets[i].TriangleCount, matrix, modelMatrix);
+            }
+        }
+
+        public dMeshBatch toGPU(GPU.Renderer gpu)
+        {
+            // Check if GPU memory needs to be reallocated
+            if (triangles == null || triangles.Length != meshTrianglesCPU.Count)
+            {
+                triangles?.Dispose();
+                workingTriangles?.Dispose();
+                meshTicketBuffer?.Dispose();
+
+                triangles = gpu.device.Allocate1D(meshTrianglesCPU.ToArray());
+                workingTriangles = gpu.device.Allocate1D<TransformedTriangle>(meshTrianglesCPU.Count);
+                meshTicketBuffer = gpu.device.Allocate1D(meshTickets.ToArray());
+            }
+            else
+            {
+                // If already allocated, just update the data
+                triangles.CopyFromCPU(meshTrianglesCPU.ToArray());
+                meshTicketBuffer.CopyFromCPU(meshTickets.ToArray());
+            }
+
+            return new dMeshBatch(triangles, workingTriangles, meshTicketBuffer);
+        }
+    }
+
+    // represents a batch of meshs on the gpu
+    public struct dMeshBatch
+    {
+        public ArrayView1D<Triangle, Stride1D.Dense> triangles;
+        public ArrayView1D<TransformedTriangle, Stride1D.Dense> workingTriangles;
+        public ArrayView1D<dMeshTicket, Stride1D.Dense> meshTickets;
+
+        public dMeshBatch(ArrayView1D<Triangle, Stride1D.Dense> triangles,
+                          ArrayView1D<TransformedTriangle, Stride1D.Dense> workingTriangles,
+                          ArrayView1D<dMeshTicket, Stride1D.Dense> meshTickets)
+        {
+            this.triangles = triangles;
+            this.workingTriangles = workingTriangles;
+            this.meshTickets = meshTickets;
+        }
+
+        public Triangle GetTriangle(int meshID, int meshTriangleIndex)
+        {
+            dMeshTicket ticket = meshTickets[meshID];
+            if (meshTriangleIndex >= 0 && meshTriangleIndex < ticket.TriangleCount)
+            {
+                int globalIndex = ticket.StartIndex + meshTriangleIndex;
+                return triangles[globalIndex];
+            }
+            return default;
+        }
+
+        public void SetWorkingTriangle(int meshID, int meshTriangleIndex, TransformedTriangle newTriangle)
+        {
+            dMeshTicket ticket = meshTickets[meshID];
+            if (meshTriangleIndex >= 0 && meshTriangleIndex < ticket.TriangleCount)
+            {
+                int globalIndex = ticket.StartIndex + meshTriangleIndex;
+                workingTriangles[globalIndex] = newTriangle;
+            }
+        }
+
+        public void SetWorkingTriangle(int index, TransformedTriangle newTriangle)
+        {
+            if (index >= 0 && index < workingTriangles.Length)
+            {
+                workingTriangles[index] = newTriangle;
+            }
+        }
+
+        public TransformedTriangle GetWorkingTriangle(int meshID, int meshTriangleIndex)
+        {
+            dMeshTicket ticket = meshTickets[meshID];
+            if (meshTriangleIndex >= 0 && meshTriangleIndex < ticket.TriangleCount)
+            {
+                int globalIndex = ticket.StartIndex + meshTriangleIndex;
+                return workingTriangles[globalIndex];
+            }
+            return default; 
+        }
+
+        public dMeshTicket GetMeshTicketByTriangleIndex(int triangleIndex)
+        {
+            // Walk the meshTickets list to find the correct mesh
+            int globalIndex = 0;
+            for (int i = 0; i < meshTickets.Length; i++)
+            {
+                if (triangleIndex < globalIndex + meshTickets[i].TriangleCount)
+                {
+                    return meshTickets[i];
+                }
+                globalIndex += meshTickets[i].TriangleCount;
+            }
+            return default; // Return default value if the triangleIndex is not found
+        }
+
+        public int GetLocalIndexByTriangleIndex(int triangleIndex)
+        {
+            int globalIndex = 0;
+            for (int i = 0; i < meshTickets.Length; i++)
+            {
+                if (triangleIndex < globalIndex + meshTickets[i].TriangleCount)
+                {
+                    int localTriangleIndex = triangleIndex - globalIndex;
+                    return localTriangleIndex;
+                }
+                globalIndex += meshTickets[i].TriangleCount;
+            }
+            return -1; // Return invalid indices if the triangleIndex is not found
+        }
+
+
+        public dMeshTicket GetMeshTicket(int meshID)
+        {
+            return meshTickets[meshID];
+        }
+
+        public Triangle GetTriangle(int triangleIndex)
+        {
+            // Walk the meshTickets list to find the correct mesh and local index
+            int globalIndex = 0;
+            for (int i = 0; i < meshTickets.Length; i++)
+            {
+                if (triangleIndex < globalIndex + meshTickets[i].TriangleCount)
+                {
+                    return triangles[triangleIndex];
+                }
+                globalIndex += meshTickets[i].TriangleCount;
+            }
+            return default;
+        }
+
+        public TransformedTriangle GetWorkingTriangle(int triangleIndex)
+        {
+            // Walk the meshTickets list to find the correct mesh and local index
+            int globalIndex = 0;
+            for (int i = 0; i < meshTickets.Length; i++)
+            {
+                if (triangleIndex < globalIndex + meshTickets[i].TriangleCount)
+                {
+                    return workingTriangles[triangleIndex];
+                }
+                globalIndex += meshTickets[i].TriangleCount;
+            }
+            return default;
         }
     }
 }
