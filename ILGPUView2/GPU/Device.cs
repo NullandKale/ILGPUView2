@@ -50,7 +50,7 @@ namespace GPU
             context = Context.Create(builder => builder.CPU().Cuda().
                                                         EnableAlgorithms().
                                                         Math(MathMode.Fast32BitOnly).
-                                                        Inlining(InliningMode.Aggressive).
+                                                        Inlining(InliningMode.Conservative).
                                                         AutoAssertions().
                                                         Optimize(OptimizationLevel.O0));
             device = context.GetPreferredDevice(preferCPU: debug).CreateAccelerator(context);

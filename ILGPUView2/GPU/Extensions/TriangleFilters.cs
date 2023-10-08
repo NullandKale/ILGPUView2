@@ -116,6 +116,8 @@ namespace GPU
     // defines a shader
     public interface ITriangleImageFilterTiled : IClearFramebuffer, IVertShader
     {
+        // this controls how big the tiles are, and directly impacts performance
+        // 8 seems to be best for 1080p
         const int tileSize = 8;
         float GetNear();
         float GetFar();
@@ -130,8 +132,6 @@ namespace GPU
     {
         public Vec3 wTerm;
         public Vec3 v0, v1, v2;
-        //public Vec3 origV0, origV1, origV2;
-        //public float det3D;
         public float minX, minY, maxX, maxY;
 
         // Bitwise flags to store state. 0 for OK, otherwise rejected for various reasons.
@@ -324,12 +324,6 @@ namespace GPU
                 }
 
                 TransformedTriangle workingTriangle = mesh.workingTriangles[triangleRecord.triangleIndex];
-
-                // Skip if any state flag is set.
-                if (workingTriangle.stateFlags != 0)
-                {
-                    continue;
-                }
 
                 if (workingTriangle.maxX < startX || workingTriangle.minX > endX || workingTriangle.maxY < startY || workingTriangle.minY > endY)
                 {
