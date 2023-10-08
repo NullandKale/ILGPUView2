@@ -397,7 +397,8 @@ namespace GPU
 
     public class TileCache : IDisposable
     {
-        public const int maxTrianglesPerTile = 500;
+        // plan to bitonic sort
+        public const int maxTrianglesPerTile = 512;
 
         private Renderer gpu;
         public int widthInTiles;
@@ -405,8 +406,9 @@ namespace GPU
 
         private MemoryBuffer1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleRecordArray;
         private MemoryBuffer1D<int, Stride1D.Dense> perTileTriangleCountArray;
+        private MemoryBuffer1D<int, Stride1D.Dense> overflow;
 
-        // pass in n
+
         public TileCache(Renderer gpu, int widthInTiles, int heightInTiles)
         {
             this.gpu = gpu;
