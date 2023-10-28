@@ -66,8 +66,8 @@ namespace ExampleProject.Modes
         {
             meshes = new List<GPUMesh>();
 
-            AddGridOfCubes(9, new Vec3(), 0.75f, new Vec3(0.4f, 0.4f, 0.4f));
-            AddConcentricCirclesOfCats(10, new Vec3(), 2.5f, new Vec3(1, 1, 1));
+            AddGridOfCubes(1, new Vec3(), 0.75f, new Vec3(0.4f, 0.4f, 0.4f));
+            AddConcentricCirclesOfCats(10, new Vec3(), 1f, new Vec3(0.25f));
         }
 
         public void AddGridOfCubes(int count, Vec3 centerPos, float minDistBetweenObjects, Vec3 scale)

@@ -37,6 +37,7 @@ namespace ExampleProject
             renderManager.AddRenderCallback(6, new DebugRT());
             renderManager.AddRenderCallback(7, new VideoStreamingMode());
             renderManager.AddRenderCallback(8, new MeshRenderer());
+            renderManager.AddRenderCallback(9, new SDF());
 
             mode.ItemsSource = new string[] 
             {
@@ -48,7 +49,8 @@ namespace ExampleProject
                 "Image Filter",
                 "DebugRT",
                 "Video Streaming Mode",
-                "Mesh Renderer"
+                "Mesh Renderer",
+                "SDF Renderer"
             };
             
 
