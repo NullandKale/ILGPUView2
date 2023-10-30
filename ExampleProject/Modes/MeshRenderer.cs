@@ -30,33 +30,35 @@ namespace ExampleProject.Modes
 
         public void CreateUI()
         {
-            // this could be better
-            string rootDirectory = @"..\..\..\Assets\glTF-Sample-Models\2.0\";
-            GLTFLoader loader = new GLTFLoader(rootDirectory);
-
             UIBuilder.Clear();
             UIBuilder.AddLabel("Debug Renderer");
 
-            List<string> gltfs = loader.ListAvailableGLTFs();
-            List<string> names = loader.ListAvailableGLTFNames();
+            string rootDirectory = @"..\..\..\Assets\glTF-Sample-Models\2.0\";
 
-            UIBuilder.AddLabel("This might crash your computer, some of these are untested, and most gltf features are unsupported");
-            UIBuilder.AddDropdown(names.ToArray(), (selected) =>
+            if(Directory.Exists(rootDirectory))
             {
-                try
+                GLTFLoader loader = new GLTFLoader(rootDirectory);
+                List<string> gltfs = loader.ListAvailableGLTFs();
+                List<string> names = loader.ListAvailableGLTFNames();
+
+                UIBuilder.AddLabel("This might crash your computer, some of these are untested, and most gltf features are unsupported");
+                UIBuilder.AddDropdown(names.ToArray(), (selected) =>
                 {
-                    var newMeshes = loader.LoadGLTF(gltfs[selected]);
-                    if (newMeshes != null && newMeshes.triangleCount > 0)
+                    try
                     {
-                        meshes = newMeshes;
+                        var newMeshes = loader.LoadGLTF(gltfs[selected]);
+                        if (newMeshes != null && newMeshes.triangleCount > 0)
+                        {
+                            meshes = newMeshes;
+                        }
                     }
-                }
-                catch 
-                {
-                    
-                }
-                
-            });
+                    catch
+                    {
+
+                    }
+
+                });
+            }
 
             var fovLabel = UIBuilder.AddLabel("");
             UIBuilder.AddSlider(fovLabel, "FOV: ", 1, 115, 75, (val) =>
