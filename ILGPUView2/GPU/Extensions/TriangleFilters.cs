@@ -118,7 +118,7 @@ namespace GPU
     {
         // this controls how big the tiles are, and directly impacts performance
         // 8 seems to be best for 1080p
-        const int tileSize = 8;
+        const int tileSize = 12;
         float GetNear();
         float GetFar();
         Mat4x4 GetCameraMat();
@@ -205,104 +205,166 @@ namespace GPU
             }
         }
 
-        public static ArrayView1D<int, Stride1D.Dense> PerformHeapSortInline(int linearIndex, int count, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray)
+        public static void SortTriangleTiles(Index1D index, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies)
         {
-            var sortedIndices = LocalMemory.Allocate1D<int>(TileCache.maxTrianglesPerTile);
+            int linearIndex = index * TileCache.maxTrianglesPerTile;
+            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
+            var stack = LocalMemory.Allocate<int>(2 * TileCache.maxTrianglesPerTile);
+            int stackIndex = 0;
 
-            // Initialize sortedIndices
-            for (int i = 0; i < count; i++)
+            // Initialize sortedIndices directly in perTileSortedIndicies
+            for (ushort i = 0; i < count; i++)
             {
-                sortedIndices[i] = i;
+                perTileSortedIndicies[linearIndex + i] = i;
             }
 
-            // Inline heapsort
-            for (int i = count / 2 - 1; i >= 0; i--)
+            // Initial push to the stack
+            stack[stackIndex++] = 0;
+            stack[stackIndex++] = count - 1;
+
+            while (stackIndex > 0)
+            {
+                int hi = stack[--stackIndex];
+                int lo = stack[--stackIndex];
+                if (lo >= hi) continue;
+
+                int pivotIndex = lo + (hi - lo) / 2;
+                float pivotValue = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + pivotIndex]].depth;
+
+                int i = lo, j = hi;
+                while (i <= j)
+                {
+                    while (perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + i]].depth < pivotValue) i++;
+                    while (perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + j]].depth > pivotValue) j--;
+
+                    if (i <= j)
+                    {
+                        ushort temp = perTileSortedIndicies[linearIndex + i];
+                        perTileSortedIndicies[linearIndex + i] = perTileSortedIndicies[linearIndex + j];
+                        perTileSortedIndicies[linearIndex + j] = temp;
+
+                        i++;
+                        j--;
+                    }
+                }
+
+                if (lo < j)
+                {
+                    stack[stackIndex++] = lo;
+                    stack[stackIndex++] = j;
+                }
+
+                if (i < hi)
+                {
+                    stack[stackIndex++] = i;
+                    stack[stackIndex++] = hi;
+                }
+            }
+        }
+
+        public static void NoSortTriangleTiles(Index1D index, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies)
+        {
+            int linearIndex = index * TileCache.maxTrianglesPerTile;
+            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
+
+            for (ushort i = 0; i < count; i++)
+            {
+                perTileSortedIndicies[linearIndex + i] = i;
+            }
+        }
+
+
+        public static void HeapSortTriangleTiles(Index1D index, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies)
+            {
+            int linearIndex = index * TileCache.maxTrianglesPerTile;
+            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
+
+            for (ushort i = 0; i < count; i++)
+            {
+                perTileSortedIndicies[linearIndex + i] = i;
+            }
+
+            for (int i = (count >> 1) - 1; i >= 0; i--)
             {
                 int root = i;
-                int child;
                 int toSwap = root;
-
+                int child;
                 do
                 {
-                    child = 2 * root + 1;
+                    child = (root << 1) + 1;
+                    float depthToSwap = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + toSwap]].depth;
 
-                    if (child < count &&
-                        perTileTriangleArray[linearIndex + sortedIndices[child]].depth <
-                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    if (child < count)
                     {
-                        toSwap = child;
+                        float depthChild = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child]].depth;
+                        if (depthChild < depthToSwap)
+                        {
+                            toSwap = child;
+                            depthToSwap = depthChild;
+                        }
                     }
 
-                    if (child + 1 < count &&
-                        perTileTriangleArray[linearIndex + sortedIndices[child + 1]].depth <
-                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    if (child + 1 < count && perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child + 1]].depth < depthToSwap)
                     {
                         toSwap = child + 1;
                     }
 
-                    if (toSwap != root)
-                    {
-                        int temp = sortedIndices[root];
-                        sortedIndices[root] = sortedIndices[toSwap];
-                        sortedIndices[toSwap] = temp;
-                        root = toSwap;
-                    }
-                    else
+                    if (toSwap == root)
                     {
                         break;
                     }
+
+                    ushort temp = perTileSortedIndicies[linearIndex + root];
+                    perTileSortedIndicies[linearIndex + root] = perTileSortedIndicies[linearIndex + toSwap];
+                    perTileSortedIndicies[linearIndex + toSwap] = temp;
+                    root = toSwap;
 
                 } while (child < count);
             }
 
             for (int i = count - 1; i >= 0; i--)
             {
-                int temp = sortedIndices[0];
-                sortedIndices[0] = sortedIndices[i];
-                sortedIndices[i] = temp;
+                ushort temp = perTileSortedIndicies[linearIndex];
+                perTileSortedIndicies[linearIndex] = perTileSortedIndicies[linearIndex + i];
+                perTileSortedIndicies[linearIndex + i] = temp;
 
                 int root = 0;
-                int child;
                 int toSwap = root;
-
+                int child;
                 do
                 {
-                    child = 2 * root + 1;
+                    child = (root << 1) + 1;
+                    float depthToSwap = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + toSwap]].depth;
 
-                    if (child < i &&
-                        perTileTriangleArray[linearIndex + sortedIndices[child]].depth <
-                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    if (child < i)
                     {
-                        toSwap = child;
+                        float depthChild = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child]].depth;
+                        if (depthChild < depthToSwap)
+                        {
+                            toSwap = child;
+                            depthToSwap = depthChild;
+                        }
                     }
 
-                    if (child + 1 < i &&
-                        perTileTriangleArray[linearIndex + sortedIndices[child + 1]].depth <
-                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    if (child + 1 < i && perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child + 1]].depth < depthToSwap)
                     {
                         toSwap = child + 1;
                     }
 
-                    if (toSwap != root)
-                    {
-                        int tempSwap = sortedIndices[root];
-                        sortedIndices[root] = sortedIndices[toSwap];
-                        sortedIndices[toSwap] = tempSwap;
-                        root = toSwap;
-                    }
-                    else
+                    if (toSwap == root)
                     {
                         break;
                     }
 
+                    ushort tempSwap = perTileSortedIndicies[linearIndex + root];
+                    perTileSortedIndicies[linearIndex + root] = perTileSortedIndicies[linearIndex + toSwap];
+                    perTileSortedIndicies[linearIndex + toSwap] = tempSwap;
+                    root = toSwap;
                 } while (child < i);
             }
-
-            return sortedIndices;
         }
 
-
-        public static void TriangleImageFilterManyTileCacheKernel<TFunc>(Index1D index, int threadCount, FrameBuffer output, dMeshBatch meshes, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
+        public static void TriangleImageFilterManyTileCacheKernel<TFunc>(Index1D index, int threadCount, FrameBuffer output, dMeshBatch meshes, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             int startX = (index.X % (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
             int startY = (index.X / (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
@@ -317,12 +379,11 @@ namespace GPU
             float heightFactor = 2.0f / output.height;
 
             int linearIndex = index * TileCache.maxTrianglesPerTile;
-            int count = perTileTriangleCount[index];
-            var sortedIndices = PerformHeapSortInline(linearIndex, count, perTileTriangleArray);
+            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
 
             for (int i = 0; i < count; i++)
             {
-                int sortedIndex = sortedIndices[i];
+                int sortedIndex = perTileSortedIndicies[linearIndex + i];
                 TileTriangleRecord triangleRecord = perTileTriangleArray[linearIndex + sortedIndex];
                 TransformedTriangle workingTriangle = meshes.GetWorkingTriangle(triangleRecord.meshID, triangleRecord.triangleIndex);
 
@@ -386,114 +447,6 @@ namespace GPU
 
     }
 
-    public struct TileTriangleRecord
-    {
-        public int meshID;
-        public int triangleIndex;
-        public float depth;
-
-        public TileTriangleRecord(int meshID, int triangleIndex, float depth)
-        {
-            this.meshID = meshID;
-            this.triangleIndex = triangleIndex;
-            this.depth = depth;
-        }
-    }
-
-    public class TileCache : IDisposable
-    {
-        // plan to bitonic sort
-        public const int maxTrianglesPerTile = 512;
-
-        private Renderer gpu;
-        public int widthInTiles;
-        public int heightInTiles;
-
-        private MemoryBuffer1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleRecordArray;
-        private MemoryBuffer1D<int, Stride1D.Dense> perTileTriangleCountArray;
-
-        public TileCache(Renderer gpu, int widthInTiles, int heightInTiles)
-        {
-            this.gpu = gpu;
-            this.widthInTiles = widthInTiles;
-            this.heightInTiles = heightInTiles;
-
-            // allocate linear memory for 50 TileTriangleRecord per tile
-            perTileTriangleCountArray = gpu.device.Allocate1D<int, Stride1D.Dense>(widthInTiles * heightInTiles, new Stride1D.Dense());
-            perTileTriangleRecordArray = gpu.device.Allocate1D<TileTriangleRecord, Stride1D.Dense>(widthInTiles * heightInTiles * maxTrianglesPerTile, new Stride1D.Dense());
-        }
-
-        public (ArrayView1D<TileTriangleRecord, Stride1D.Dense> tileTriangleRecords, ArrayView1D<int, Stride1D.Dense> tileTriangleCounts) GetCache()
-        {
-            perTileTriangleCountArray.MemSetToZero();
-            return (perTileTriangleRecordArray, perTileTriangleCountArray);
-        }
-
-        public static void TransformTrianglesKernel<TFunc>(Index1D index, dMeshBatch meshes, TFunc filter, int width, int height, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount) where TFunc : unmanaged, IVertShader
-        {
-            // index is the thread index its there is one per triangle
-            dMeshTicket currentMesh = meshes.GetMeshTicketByTriangleIndex(index);
-            Triangle original = meshes.GetTriangle(index);
-            TransformedTriangle transformed = filter.VertShader(original, currentMesh.matrix, width, height);
-            meshes.SetWorkingTriangle(index, transformed);
-
-            if (transformed.stateFlags != 0)
-            {
-                return;
-            }
-
-            // Calculate the tile extents for the transformed triangle
-            int tileStartX = (int)Math.Floor(transformed.minX / ITriangleImageFilterTiled.tileSize);
-            int tileStartY = (int)Math.Floor(transformed.minY / ITriangleImageFilterTiled.tileSize);
-            int tileEndX = (int)Math.Ceiling(transformed.maxX / ITriangleImageFilterTiled.tileSize);
-            int tileEndY = (int)Math.Ceiling(transformed.maxY / ITriangleImageFilterTiled.tileSize);
-
-            // Loop through the tiles and update perTileTriangleArray and perTileTriangleCountArray
-            for (int tileY = tileStartY; tileY < tileEndY; ++tileY)
-            {
-                for (int tileX = tileStartX; tileX < tileEndX; ++tileX)
-                {
-                    // Calculate the number of tiles in the x and y dimensions
-                    int widthInTiles = width / ITriangleImageFilterTiled.tileSize;
-                    int heightInTiles = height / ITriangleImageFilterTiled.tileSize;
-
-                    // Calculate tileIndex based on tile grid
-                    int tileIndex = tileY * widthInTiles + tileX;
-
-                    if (tileIndex >= 0 && tileIndex < perTileTriangleCount.Length)
-                    {
-                        int currentCount = Atomic.Add(ref perTileTriangleCount[tileIndex], 1);
-
-                        // Check if we've reached the max number of triangles for this tile
-                        if (currentCount < TileCache.maxTrianglesPerTile)
-                        {
-                            // Calculate the linear index for this tile and triangle within perTileTriangleArray
-                            int linearIndex = tileIndex * TileCache.maxTrianglesPerTile + currentCount;
-
-                            perTileTriangleArray[linearIndex] = new TileTriangleRecord(currentMesh.meshIndex, meshes.GetLocalIndexByTriangleIndex(index), transformed.avgDepth);
-                        }
-                    }
-                }
-            }
-
-        }
-
-
-        public void Dispose()
-        {
-            if(perTileTriangleCountArray != null)
-            {
-                perTileTriangleCountArray.Dispose();
-            }
-
-            if (perTileTriangleRecordArray != null)
-            {
-                perTileTriangleRecordArray.Dispose();
-            }
-        }
-    }
-
-
     public partial class Renderer
     {
         private TileCache tileCache;
@@ -519,32 +472,46 @@ namespace GPU
             }
 
             var transformKernel = GetTileCacheTransformTrianglesKernel(filter);
+            var tileSortKernel = GetSortTileCacheKernel();
             var drawKernel = GetTriangleImageFilterManyTileCacheKernel(filter);
             var clearKernel = GetClearFrameBufferKernel(filter);
 
             FrameBuffer framebuffer = output.toDevice(this);
 
-            (ArrayView1D<TileTriangleRecord, Stride1D.Dense> tileTriangles, ArrayView1D<int, Stride1D.Dense > tileTriangleCounts) = tileCache.GetCache();
+            (ArrayView1D<TileTriangleRecord, Stride1D.Dense> tileTriangles, ArrayView1D<int, Stride1D.Dense> tileTriangleCounts, ArrayView1D<ushort, Stride1D.Dense> tileSortedIndicies) = tileCache.GetCache();
             
             meshes.ApplyCamera(filter.GetCameraMat());
             dMeshBatch deviceMeshes = meshes.toGPU(this);
 
             clearKernel(numTiles, framebuffer, filter);
             transformKernel(deviceMeshes.triangles.IntLength, deviceMeshes, filter, output.width, output.height, tileTriangles, tileTriangleCounts);
-            drawKernel(numTiles, numTiles, framebuffer, deviceMeshes, tileTriangles, tileTriangleCounts, filter);
+            tileSortKernel(numTiles, tileTriangles, tileTriangleCounts, tileSortedIndicies);
+            drawKernel(numTiles, numTiles, framebuffer, deviceMeshes, tileTriangles, tileTriangleCounts, tileSortedIndicies, filter);
         }
 
 
         // this caches the gpu kernel for the vert shader kernel for each shader
-        private Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc> GetTriangleImageFilterManyTileCacheKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
+        private Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, TFunc> GetTriangleImageFilterManyTileCacheKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             if (!kernels.ContainsKey(filter.GetType()))
             {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>(TriangleImageFilterManyTileCacheKernel);
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, TFunc>(TriangleImageFilterManyTileCacheKernel);
                 kernels.Add(filter.GetType(), kernel);
             }
 
-            return (Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>)kernels[filter.GetType()];
+            return (Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, TFunc>)kernels[filter.GetType()];
+        }
+
+        private Action<Index1D, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>> GetSortTileCacheKernel()
+        {
+            if (!kernels.ContainsKey(typeof(ushort)))
+            {
+                // sorting is slower, for now we skip sorting
+                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>>(NoSortTriangleTiles);
+                kernels.Add(typeof(ushort), kernel);
+            }
+
+            return (Action<Index1D, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>>)kernels[typeof(ushort)];
         }
 
         private Action<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> GetTileCacheTransformTrianglesKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVertShader
