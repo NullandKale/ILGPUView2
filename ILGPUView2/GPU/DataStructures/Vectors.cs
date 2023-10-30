@@ -87,6 +87,16 @@ namespace GPU
             return new Vec4(x, y, z, w);
         }
 
+        public Vec4 MultiplyVector(Vec3 vec)
+        {
+            float x = Get(0) * vec.x + Get(4) * vec.y + Get(8) * vec.z + Get(12);
+            float y = Get(1) * vec.x + Get(5) * vec.y + Get(9) * vec.z + Get(13);
+            float z = Get(2) * vec.x + Get(6) * vec.y + Get(10) * vec.z + Get(14);
+            float w = Get(3) * vec.x + Get(7) * vec.y + Get(11) * vec.z + Get(15);
+
+            return new Vec4(x, y, z, w);
+        }
+
         public GPU.Triangle MultiplyTriangle(GPU.Triangle tri)
         {
             Vec4 v0 = MultiplyVector(new Vec4(tri.v0.x, tri.v0.y, tri.v0.z, 1.0f));
@@ -224,6 +234,13 @@ namespace GPU
         public float x;
         public float y;
 
+        public Vec2(float v)
+        {
+            this.x = v;
+            this.y = v;
+        }
+
+
         public Vec2(float x, float y)
         {
             this.x = x;
@@ -318,6 +335,19 @@ namespace GPU
         public float length()
         {
             return XMath.Sqrt(x * x + y * y);
+        }
+
+        public static Vec2 Max(Vec2 a, Vec2 b)
+        {
+            return new Vec2(
+                XMath.Max(a.x, b.x),
+                XMath.Max(a.y, b.y)
+            );
+        }
+
+        public static Vec2 Abs(Vec2 q)
+        {
+            return new Vec2(XMath.Abs(q.x), XMath.Abs(q.y));
         }
     }
 

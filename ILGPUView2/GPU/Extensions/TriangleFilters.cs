@@ -133,6 +133,7 @@ namespace GPU
         public Vec3 wTerm;
         public Vec3 v0, v1, v2;
         public float minX, minY, maxX, maxY;
+        public float avgDepth;
 
         // Bitwise flags to store state. 0 for OK, otherwise rejected for various reasons.
         public int stateFlags;
@@ -161,6 +162,9 @@ namespace GPU
             minY = XMath.Min(pv0.y, XMath.Min(pv1.y, pv2.y));
             maxX = XMath.Max(pv0.x, XMath.Max(pv1.x, pv2.x));
             maxY = XMath.Max(pv0.y, XMath.Max(pv1.y, pv2.y));
+
+            // Compute and store the average depth
+            avgDepth = (this.v0.z + this.v1.z + this.v2.z) / 3.0f;
 
             // Initialize stateFlags to 0 (OK)
             stateFlags = 0;
@@ -201,6 +205,103 @@ namespace GPU
             }
         }
 
+        public static ArrayView1D<int, Stride1D.Dense> PerformHeapSortInline(int linearIndex, int count, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray)
+        {
+            var sortedIndices = LocalMemory.Allocate1D<int>(TileCache.maxTrianglesPerTile);
+
+            // Initialize sortedIndices
+            for (int i = 0; i < count; i++)
+            {
+                sortedIndices[i] = i;
+            }
+
+            // Inline heapsort
+            for (int i = count / 2 - 1; i >= 0; i--)
+            {
+                int root = i;
+                int child;
+                int toSwap = root;
+
+                do
+                {
+                    child = 2 * root + 1;
+
+                    if (child < count &&
+                        perTileTriangleArray[linearIndex + sortedIndices[child]].depth <
+                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    {
+                        toSwap = child;
+                    }
+
+                    if (child + 1 < count &&
+                        perTileTriangleArray[linearIndex + sortedIndices[child + 1]].depth <
+                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    {
+                        toSwap = child + 1;
+                    }
+
+                    if (toSwap != root)
+                    {
+                        int temp = sortedIndices[root];
+                        sortedIndices[root] = sortedIndices[toSwap];
+                        sortedIndices[toSwap] = temp;
+                        root = toSwap;
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                } while (child < count);
+            }
+
+            for (int i = count - 1; i >= 0; i--)
+            {
+                int temp = sortedIndices[0];
+                sortedIndices[0] = sortedIndices[i];
+                sortedIndices[i] = temp;
+
+                int root = 0;
+                int child;
+                int toSwap = root;
+
+                do
+                {
+                    child = 2 * root + 1;
+
+                    if (child < i &&
+                        perTileTriangleArray[linearIndex + sortedIndices[child]].depth <
+                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    {
+                        toSwap = child;
+                    }
+
+                    if (child + 1 < i &&
+                        perTileTriangleArray[linearIndex + sortedIndices[child + 1]].depth <
+                        perTileTriangleArray[linearIndex + sortedIndices[toSwap]].depth)
+                    {
+                        toSwap = child + 1;
+                    }
+
+                    if (toSwap != root)
+                    {
+                        int tempSwap = sortedIndices[root];
+                        sortedIndices[root] = sortedIndices[toSwap];
+                        sortedIndices[toSwap] = tempSwap;
+                        root = toSwap;
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                } while (child < i);
+            }
+
+            return sortedIndices;
+        }
+
+
         public static void TriangleImageFilterManyTileCacheKernel<TFunc>(Index1D index, int threadCount, FrameBuffer output, dMeshBatch meshes, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             int startX = (index.X % (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
@@ -215,12 +316,14 @@ namespace GPU
             float widthFactor = 2.0f / output.width;
             float heightFactor = 2.0f / output.height;
 
-            int count = perTileTriangleCount[index];
             int linearIndex = index * TileCache.maxTrianglesPerTile;
+            int count = perTileTriangleCount[index];
+            var sortedIndices = PerformHeapSortInline(linearIndex, count, perTileTriangleArray);
 
             for (int i = 0; i < count; i++)
             {
-                TileTriangleRecord triangleRecord = perTileTriangleArray[linearIndex + i];
+                int sortedIndex = sortedIndices[i];
+                TileTriangleRecord triangleRecord = perTileTriangleArray[linearIndex + sortedIndex];
                 TransformedTriangle workingTriangle = meshes.GetWorkingTriangle(triangleRecord.meshID, triangleRecord.triangleIndex);
 
                 int minX = XMath.Max((int)XMath.Floor(workingTriangle.minX), startX);
@@ -287,11 +390,13 @@ namespace GPU
     {
         public int meshID;
         public int triangleIndex;
+        public float depth;
 
-        public TileTriangleRecord(int meshID, int triangleIndex)
+        public TileTriangleRecord(int meshID, int triangleIndex, float depth)
         {
             this.meshID = meshID;
             this.triangleIndex = triangleIndex;
+            this.depth = depth;
         }
     }
 
@@ -365,11 +470,12 @@ namespace GPU
                             // Calculate the linear index for this tile and triangle within perTileTriangleArray
                             int linearIndex = tileIndex * TileCache.maxTrianglesPerTile + currentCount;
 
-                            perTileTriangleArray[linearIndex] = new TileTriangleRecord(currentMesh.meshIndex, meshes.GetLocalIndexByTriangleIndex(index));
+                            perTileTriangleArray[linearIndex] = new TileTriangleRecord(currentMesh.meshIndex, meshes.GetLocalIndexByTriangleIndex(index), transformed.avgDepth);
                         }
                     }
                 }
             }
+
         }
 
 
@@ -443,6 +549,7 @@ namespace GPU
 
         private Action<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> GetTileCacheTransformTrianglesKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVertShader
         {
+
             if (!kernels.ContainsKey(typeof(TileCache)))
             {
                 var kernel = device.LoadAutoGroupedStreamKernel<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>(TileCache.TransformTrianglesKernel);
