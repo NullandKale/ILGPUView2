@@ -51,6 +51,8 @@ namespace ExampleProject.Modes
 
     public struct DebugFilter : IImageFilter
     {
+        // tick is a frame count starting at 0
+        // x and y are the position in the framebuffer in the domain [0, 1]
         public RGBA32 Apply(int tick, float x, float y, dImage framebuffer)
         {
             if ((int)(x * 10) % 2 == (int)(y * 10) % 2)

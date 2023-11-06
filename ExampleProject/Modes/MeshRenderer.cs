@@ -27,8 +27,6 @@ namespace ExampleProject.Modes
         private GPUFrameBuffer frameBuffer;
         private float fov = 75;
 
-        bool initialized;
-
         public void CreateUI()
         {
             UIBuilder.Clear();
@@ -109,8 +107,8 @@ namespace ExampleProject.Modes
             AddConcentricCirclesOfCats(50, new Vec3(), 2f, new Vec3(0.3, 0.3, 0.3));
             AddConcentricCirclesOfCats(100, new Vec3(), 2.5f, new Vec3(0.1, 0.1, 0.1));
             AddConcentricCirclesOfCats(100, new Vec3(), 3f, new Vec3(0.1, 0.1, 0.1));
-            AddConcentricCirclesOfCats(150, new Vec3(), 3.5f, new Vec3(0.1, 0.1, 0.1));
-            AddConcentricCirclesOfCats(150, new Vec3(), 4f, new Vec3(0.1, 0.1, 0.1));
+            //AddConcentricCirclesOfCats(150, new Vec3(), 3.5f, new Vec3(0.1, 0.1, 0.1));
+            //AddConcentricCirclesOfCats(150, new Vec3(), 4f, new Vec3(0.1, 0.1, 0.1));
             //AddConcentricCirclesOfCats(150, new Vec3(), 6f, new Vec3(0.1, 0.1, 0.1));
             //AddConcentricCirclesOfCats(150, new Vec3(), 8f, new Vec3(0.1, 0.1, 0.1));
 

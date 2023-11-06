@@ -26,7 +26,7 @@ namespace ExampleProject
             AddRenderModes();
         }
 
-        public void AddRenderModes(int default_mode = 8)
+        public void AddRenderModes(int default_mode = 9)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
             renderManager.AddRenderCallback(1, new DrawCircles());

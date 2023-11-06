@@ -118,7 +118,7 @@ namespace GPU
     {
         // this controls how big the tiles are, and directly impacts performance
         // 8 seems to be best for 1080p
-        const int tileSize = 12;
+        const int tileSize = 8;
         float GetNear();
         float GetFar();
         Mat4x4 GetCameraMat();

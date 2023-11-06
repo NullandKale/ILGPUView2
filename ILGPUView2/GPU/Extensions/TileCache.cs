@@ -7,7 +7,7 @@ namespace GPU
     public class TileCache : IDisposable
     {
         // plan to bitonic sort
-        public const int maxTrianglesPerTile = 512;
+        public const int maxTrianglesPerTile = 1024;
 
         private Renderer gpu;
         public int widthInTiles;
