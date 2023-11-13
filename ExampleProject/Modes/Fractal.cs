@@ -148,12 +148,12 @@ namespace ExampleProject.Modes
 
     public struct FractalRenderer : IImageFilter
     {
-        private readonly int _maxIterations;
-        private readonly double _escapeRadius;
-        private readonly int _mode;
-        private readonly double _juliaReal;
-        private readonly double _juliaImaginary;
-        private readonly Vec3 _offset;
+        private int _maxIterations;
+        private double _escapeRadius;
+        private int _mode;
+        private double _juliaReal;
+        private double _juliaImaginary;
+        private Vec3 _offset;
 
         public FractalRenderer(Vec3 offset, int maxIterations, double escapeRadius, int mode, double juliaReal = 0, double juliaImaginary = 0)
         {

@@ -146,40 +146,17 @@ The `Debug` class implements the `IRenderCallback` interface, but only uses two 
 ```csharp
 public class Debug : IRenderCallback
 {
+    // other IRenderCallback functions omitted for length
+
     public void CreateUI()
     {
         UIBuilder.Clear();
         UIBuilder.AddLabel("Debug Renderer");
     }
 
-    public void OnKeyPressed(Key key, ModifierKeys modifiers)
-    {
-
-    }
-
-    public void OnLateRender(Renderer gpu)
-    {
-
-    }
-
     public void OnRender(Renderer gpu)
     {
         gpu.ExecuteFilter<DebugFilter>(gpu.framebuffer);
-    }
-
-    public void OnStart(Renderer gpu)
-    {
-
-    }
-
-    public void OnStop()
-    {
-
-    }
-
-    public void SetMode(int mode)
-    {
-
     }
 
     public (int xSize, int ySize, bool update) BeforeResolutionChanged(RenderWindow renderWindow, int newWidth, int newHeight)
