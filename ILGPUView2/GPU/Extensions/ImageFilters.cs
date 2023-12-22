@@ -2,6 +2,7 @@
 using GPU;
 using ILGPU;
 using ILGPU.Runtime;
+using ILGPUView2.GPU.DataStructures;
 using ILGPUView2.GPU.Filters;
 using ILGPUView2.GPU.RT;
 using System;
@@ -21,6 +22,11 @@ namespace GPU
     public interface IImageMask
     {
         RGBA32 Apply(int tick, float x, float y, dImage output, dImage input);
+    }
+
+    public interface IMegaTextureMask
+    {
+        RGBA32 Apply(int tick, float x, float y, dImage output, dMegaTexture input);
     }
 
     public interface IIntImageMask
@@ -49,11 +55,31 @@ namespace GPU
             double u = (double)x / (double)output.width;
             double v = (double)y / (double)output.height;
 
-            output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output));
+            RGBA32 color = filter.Apply(tick, (float)u, (float)v, output);
+
+            if(color.a != 0)
+            {
+                output.SetColorAt(x, y, color);
+            }
+            else
+            {
+                output.SetColorAt(x, y, new RGBA32(0, 0, 0));
+            }
         }
 
 
         public static void ImageMaskKernel<TFunc>(Index1D index, int tick, dImage output, dImage input, TFunc filter) where TFunc : unmanaged, IImageMask
+        {
+            int x = index.X % output.width;
+            int y = index.X / output.width;
+
+            double u = (double)x / (double)output.width;
+            double v = (double)y / (double)output.height;
+
+            output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output, input));
+        }
+
+        public static void MegaTextureMaskKernel<TFunc>(Index1D index, int tick, dImage output, dMegaTexture input, TFunc filter) where TFunc : unmanaged, IMegaTextureMask
         {
             int x = index.X % output.width;
             int y = index.X / output.width;
@@ -135,6 +161,23 @@ namespace GPU
             }
 
             return (Action<Index1D, int, dImage, dImage, TFunc>)kernels[filter.GetType()];
+        }
+
+        public void ExecuteMegaTextureMask<TFunc>(GPUImage output, GPUMegaTexture input, TFunc filter = default) where TFunc : unmanaged, IMegaTextureMask
+        {
+            var kernel = GetMegaTextureMaskKernel(filter);
+            kernel(output.width * output.height, ticks, output.toDevice(this), input.ToGPU(this), filter);
+        }
+
+        private Action<Index1D, int, dImage, dMegaTexture, TFunc> GetMegaTextureMaskKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IMegaTextureMask
+        {
+            if (!kernels.ContainsKey(filter.GetType()))
+            {
+                Action<Index1D, int, dImage, dMegaTexture, TFunc> kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, dMegaTexture, TFunc>(MegaTextureMaskKernel);
+                kernels.Add(filter.GetType(), kernel);
+            }
+
+            return (Action<Index1D, int, dImage, dMegaTexture, TFunc>)kernels[filter.GetType()];
         }
 
         public void ExecuteIntMask<TFunc>(GPUImage output, GPUImage input, TFunc filter = default) where TFunc : unmanaged, IIntImageMask

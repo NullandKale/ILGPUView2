@@ -14,6 +14,8 @@ using System.Windows;
 using ILGPU.Algorithms;
 using System.Windows.Media.Media3D;
 using System.Reflection.Metadata.Ecma335;
+using System.Diagnostics;
+using ILGPUView2.GPU.Extensions;
 
 namespace GPU
 {
@@ -63,15 +65,10 @@ namespace GPU
             return near;
         }
 
-        public RGBA32 FragShader(float x, float y, TransformedTriangle triangle, float i)
+        public RGBA32 FragShader(float x, float y, TransformedTriangle triangle, float i, dMegaTexture textures)
         {
-            float r = XMath.Sin(i * 15.53f + 0.26f);
-            float g = XMath.Sin(i * 156.15f + 0.98f);
-            float b = XMath.Sin(i * 3.75f + 0.7612f);
-
-            return new RGBA32(r, g, b);
+            return textures.GetColorAt(0, x, y);
         }
-
 
         public TransformedTriangle VertShader(Triangle original, Mat4x4 matrix, int width, int height)
         {
@@ -79,7 +76,7 @@ namespace GPU
             Vec4 v1 = matrix.MultiplyVector(new Vec4(original.v1.x, original.v1.y, original.v1.z, 1.0f));
             Vec4 v2 = matrix.MultiplyVector(new Vec4(original.v2.x, original.v2.y, original.v2.z, 1.0f));
 
-            return new TransformedTriangle(v0, v1, v2, width, height);
+            return new TransformedTriangle(v0, v1, v2, original.uv0, original.uv1, original.uv2, width, height);
         }
     }
 
@@ -91,11 +88,25 @@ namespace GPU
         public Vec3 v1;
         public Vec3 v2;
 
+        public Vec2 uv0;
+        public Vec2 uv1;
+        public Vec2 uv2;
+
         public Triangle(Vec3 v0, Vec3 v1, Vec3 v2)
         {
             this.v0 = v0;
             this.v1 = v1;
             this.v2 = v2;
+        }
+
+        public Triangle(Vec3 v0, Vec3 v1, Vec3 v2, Vec2 uv0, Vec2 uv1, Vec2 uv2)
+        {
+            this.v0 = v0;
+            this.v1 = v1;
+            this.v2 = v2;
+            this.uv0 = uv0;
+            this.uv1 = uv1;
+            this.uv2 = uv2;
         }
     }
 
@@ -116,15 +127,12 @@ namespace GPU
     // defines a shader
     public interface ITriangleImageFilterTiled : IClearFramebuffer, IVertShader
     {
-        // this controls how big the tiles are, and directly impacts performance
-        // 8 seems to be best for 1080p
-        const int tileSize = 8;
         float GetNear();
         float GetFar();
         Mat4x4 GetCameraMat();
 
         // Fragment shader function
-        RGBA32 FragShader(float x, float y, TransformedTriangle triangle, float i);
+        RGBA32 FragShader(float x, float y, TransformedTriangle triangle, float i, dMegaTexture textures);
     }
 
     // this is the triangle output format, kinda like ther vertex format
@@ -132,19 +140,27 @@ namespace GPU
     {
         public Vec3 wTerm;
         public Vec3 v0, v1, v2;
+        public Vec2 uv0, uv1, uv2;
+
+        // this needs to be in pixel space 0 - width, 0 - height
         public float minX, minY, maxX, maxY;
-        public float avgDepth;
 
         // Bitwise flags to store state. 0 for OK, otherwise rejected for various reasons.
         public int stateFlags;
+        public int meshID;
 
         // v0, v1, v2 are all in camera space
         // width and height are the framebuffer size
-        public TransformedTriangle(Vec4 v0, Vec4 v1, Vec4 v2, int width, int height)
+        public TransformedTriangle(Vec4 v0, Vec4 v1, Vec4 v2, Vec2 uv0, Vec2 uv1, Vec2 uv2, int width, int height)
         {
             Vec3 origV0 = new Vec3(v0.x, v0.y, v0.z);
             Vec3 origV1 = new Vec3(v1.x, v1.y, v1.z);
             Vec3 origV2 = new Vec3(v2.x, v2.y, v2.z);
+
+            // Assign UV coordinates
+            this.uv0 = uv0;
+            this.uv1 = uv1;
+            this.uv2 = uv2;
 
             this.v0 = origV0 / v0.w;
             this.v1 = origV1 / v1.w;
@@ -154,17 +170,14 @@ namespace GPU
 
             wTerm = new Vec3(v0.w, v1.w, v2.w);
 
-            Vec3 pv0 = new Vec3((this.v0.x + 1.0f) * width / 2f, (this.v0.y + 1.0f) * height / 2f, this.v0.z);
-            Vec3 pv1 = new Vec3((this.v1.x + 1.0f) * width / 2f, (this.v1.y + 1.0f) * height / 2f, this.v1.z);
-            Vec3 pv2 = new Vec3((this.v2.x + 1.0f) * width / 2f, (this.v2.y + 1.0f) * height / 2f, this.v2.z);
+            Vec3 pv0 = new Vec3((this.v0.x + 1.0f) * width * 0.5f, (this.v0.y + 1.0f) * height * 0.5f, this.v0.z);
+            Vec3 pv1 = new Vec3((this.v1.x + 1.0f) * width * 0.5f, (this.v1.y + 1.0f) * height * 0.5f, this.v1.z);
+            Vec3 pv2 = new Vec3((this.v2.x + 1.0f) * width * 0.5f, (this.v2.y + 1.0f) * height * 0.5f, this.v2.z);
 
             minX = XMath.Min(pv0.x, XMath.Min(pv1.x, pv2.x));
             minY = XMath.Min(pv0.y, XMath.Min(pv1.y, pv2.y));
             maxX = XMath.Max(pv0.x, XMath.Max(pv1.x, pv2.x));
             maxY = XMath.Max(pv0.y, XMath.Max(pv1.y, pv2.y));
-
-            // Compute and store the average depth
-            avgDepth = (this.v0.z + this.v1.z + this.v2.z) / 3.0f;
 
             // Initialize stateFlags to 0 (OK)
             stateFlags = 0;
@@ -178,9 +191,17 @@ namespace GPU
             // If the triangle is backfacing, set the 2nd bit to 1.
             if (det3D < 0)
             {
-                stateFlags |= 2;
+                //stateFlags |= 2;
             }
         }
+
+        public float GetInterpolatedDepth(float alpha, float beta, float gamma)
+        {
+            // Using the barycentric coordinates, interpolate the depth
+            float depth = alpha * v0.z + beta * v1.z + gamma * v2.z;
+            return depth;
+        }
+
     }
 
 
@@ -189,15 +210,15 @@ namespace GPU
         // separate clear kernel for performance
         public static void ClearFramebufferKernel<TFunc>(Index1D index, FrameBuffer output, TFunc filter) where TFunc : unmanaged, IClearFramebuffer
         {
-            int startX = (index.X % (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
-            int startY = (index.X / (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
+            int startX = (index.X % (output.width / RasterisationSettings.tileSize)) * RasterisationSettings.tileSize;
+            int startY = (index.X / (output.width / RasterisationSettings.tileSize)) * RasterisationSettings.tileSize;
 
-            int endX = Math.Min(startX + ITriangleImageFilterTiled.tileSize, output.width);
-            int endY = Math.Min(startY + ITriangleImageFilterTiled.tileSize, output.height);
+            int endX = Math.Min(startX + RasterisationSettings.tileSize, output.width);
+            int endY = Math.Min(startY + RasterisationSettings.tileSize, output.height);
 
-            for (int y = 0; y < ITriangleImageFilterTiled.tileSize; ++y)
+            for (int y = 0; y < RasterisationSettings.tileSize; ++y)
             {
-                for (int x = 0; x < ITriangleImageFilterTiled.tileSize; ++x)
+                for (int x = 0; x < RasterisationSettings.tileSize; ++x)
                 {
                     output.SetDepthPixel(startX + x, startY + y, filter.GetDepthClearColor());
                     output.SetColorAt(startX + x, startY + y, filter.GetColorClearColor());
@@ -205,172 +226,40 @@ namespace GPU
             }
         }
 
-        public static void SortTriangleTiles(Index1D index, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies)
+        public static void TriangleImageFilterManyTileCacheKernel<TFunc>(int length, FrameBuffer output, dMeshBatch meshes, dMegaTexture textures, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
-            int linearIndex = index * TileCache.maxTrianglesPerTile;
-            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
-            var stack = LocalMemory.Allocate<int>(2 * TileCache.maxTrianglesPerTile);
-            int stackIndex = 0;
+            var index = Group.DimX * Grid.IdxX + Group.IdxX;
 
-            // Initialize sortedIndices directly in perTileSortedIndicies
-            for (ushort i = 0; i < count; i++)
+            if (index >= length)
             {
-                perTileSortedIndicies[linearIndex + i] = i;
+                return;
             }
 
-            // Initial push to the stack
-            stack[stackIndex++] = 0;
-            stack[stackIndex++] = count - 1;
+            int count = XMath.Min(perTileTriangleCount[index], RasterisationSettings.maxTrianglesPerTile);
 
-            while (stackIndex > 0)
+            if (count <= 0)
             {
-                int hi = stack[--stackIndex];
-                int lo = stack[--stackIndex];
-                if (lo >= hi) continue;
+                return;
+            }
 
-                int pivotIndex = lo + (hi - lo) / 2;
-                float pivotValue = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + pivotIndex]].depth;
+            int startX = (index % (output.width / RasterisationSettings.tileSize)) * RasterisationSettings.tileSize;
+            int startY = (index / (output.width / RasterisationSettings.tileSize)) * RasterisationSettings.tileSize;
 
-                int i = lo, j = hi;
-                while (i <= j)
+            int endX = Math.Min(startX + RasterisationSettings.tileSize, output.width);
+            int endY = Math.Min(startY + RasterisationSettings.tileSize, output.height);
+
+            if (RasterisationSettings.debugCountColor)
+            {
+                for (int y = startY; y <= endY; y++)
                 {
-                    while (perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + i]].depth < pivotValue) i++;
-                    while (perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + j]].depth > pivotValue) j--;
-
-                    if (i <= j)
+                    for (int x = startX; x <= endX; x++)
                     {
-                        ushort temp = perTileSortedIndicies[linearIndex + i];
-                        perTileSortedIndicies[linearIndex + i] = perTileSortedIndicies[linearIndex + j];
-                        perTileSortedIndicies[linearIndex + j] = temp;
-
-                        i++;
-                        j--;
+                        output.SetColorAt(x, y, new RGBA32(count / (float)RasterisationSettings.maxTrianglesPerTile));
                     }
                 }
 
-                if (lo < j)
-                {
-                    stack[stackIndex++] = lo;
-                    stack[stackIndex++] = j;
-                }
-
-                if (i < hi)
-                {
-                    stack[stackIndex++] = i;
-                    stack[stackIndex++] = hi;
-                }
+                return;
             }
-        }
-
-        public static void NoSortTriangleTiles(Index1D index, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies)
-        {
-            int linearIndex = index * TileCache.maxTrianglesPerTile;
-            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
-
-            for (ushort i = 0; i < count; i++)
-            {
-                perTileSortedIndicies[linearIndex + i] = i;
-            }
-        }
-
-
-        public static void HeapSortTriangleTiles(Index1D index, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies)
-            {
-            int linearIndex = index * TileCache.maxTrianglesPerTile;
-            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
-
-            for (ushort i = 0; i < count; i++)
-            {
-                perTileSortedIndicies[linearIndex + i] = i;
-            }
-
-            for (int i = (count >> 1) - 1; i >= 0; i--)
-            {
-                int root = i;
-                int toSwap = root;
-                int child;
-                do
-                {
-                    child = (root << 1) + 1;
-                    float depthToSwap = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + toSwap]].depth;
-
-                    if (child < count)
-                    {
-                        float depthChild = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child]].depth;
-                        if (depthChild < depthToSwap)
-                        {
-                            toSwap = child;
-                            depthToSwap = depthChild;
-                        }
-                    }
-
-                    if (child + 1 < count && perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child + 1]].depth < depthToSwap)
-                    {
-                        toSwap = child + 1;
-                    }
-
-                    if (toSwap == root)
-                    {
-                        break;
-                    }
-
-                    ushort temp = perTileSortedIndicies[linearIndex + root];
-                    perTileSortedIndicies[linearIndex + root] = perTileSortedIndicies[linearIndex + toSwap];
-                    perTileSortedIndicies[linearIndex + toSwap] = temp;
-                    root = toSwap;
-
-                } while (child < count);
-            }
-
-            for (int i = count - 1; i >= 0; i--)
-            {
-                ushort temp = perTileSortedIndicies[linearIndex];
-                perTileSortedIndicies[linearIndex] = perTileSortedIndicies[linearIndex + i];
-                perTileSortedIndicies[linearIndex + i] = temp;
-
-                int root = 0;
-                int toSwap = root;
-                int child;
-                do
-                {
-                    child = (root << 1) + 1;
-                    float depthToSwap = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + toSwap]].depth;
-
-                    if (child < i)
-                    {
-                        float depthChild = perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child]].depth;
-                        if (depthChild < depthToSwap)
-                        {
-                            toSwap = child;
-                            depthToSwap = depthChild;
-                        }
-                    }
-
-                    if (child + 1 < i && perTileTriangleArray[linearIndex + perTileSortedIndicies[linearIndex + child + 1]].depth < depthToSwap)
-                    {
-                        toSwap = child + 1;
-                    }
-
-                    if (toSwap == root)
-                    {
-                        break;
-                    }
-
-                    ushort tempSwap = perTileSortedIndicies[linearIndex + root];
-                    perTileSortedIndicies[linearIndex + root] = perTileSortedIndicies[linearIndex + toSwap];
-                    perTileSortedIndicies[linearIndex + toSwap] = tempSwap;
-                    root = toSwap;
-                } while (child < i);
-            }
-        }
-
-        public static void TriangleImageFilterManyTileCacheKernel<TFunc>(Index1D index, int threadCount, FrameBuffer output, dMeshBatch meshes, ArrayView1D<TileTriangleRecord, Stride1D.Dense> perTileTriangleArray, ArrayView1D<int, Stride1D.Dense> perTileTriangleCount, ArrayView1D<ushort, Stride1D.Dense> perTileSortedIndicies, TFunc filter) where TFunc : unmanaged, ITriangleImageFilterTiled
-        {
-            int startX = (index.X % (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
-            int startY = (index.X / (output.width / ITriangleImageFilterTiled.tileSize)) * ITriangleImageFilterTiled.tileSize;
-
-            int endX = Math.Min(startX + ITriangleImageFilterTiled.tileSize, output.width);
-            int endY = Math.Min(startY + ITriangleImageFilterTiled.tileSize, output.height);
 
             float near = filter.GetNear();
             float far = filter.GetFar();
@@ -378,15 +267,16 @@ namespace GPU
             float widthFactor = 2.0f / output.width;
             float heightFactor = 2.0f / output.height;
 
-            int linearIndex = index * TileCache.maxTrianglesPerTile;
-            int count = XMath.Min(perTileTriangleCount[index], TileCache.maxTrianglesPerTile);
+            int linearIndex = index * RasterisationSettings.maxTrianglesPerTile;
 
             for (int i = 0; i < count; i++)
             {
-                int sortedIndex = perTileSortedIndicies[linearIndex + i];
-                TileTriangleRecord triangleRecord = perTileTriangleArray[linearIndex + sortedIndex];
+                Group.Barrier();
+
+                TileTriangleRecord triangleRecord = perTileTriangleArray[linearIndex + i];
                 TransformedTriangle workingTriangle = meshes.GetWorkingTriangle(triangleRecord.meshID, triangleRecord.triangleIndex);
 
+                // maybe this should be doubles?
                 int minX = XMath.Max((int)XMath.Floor(workingTriangle.minX), startX);
                 int minY = XMath.Max((int)XMath.Floor(workingTriangle.minY), startY);
                 int maxX = XMath.Min((int)XMath.Ceiling(workingTriangle.maxX), endX);
@@ -405,11 +295,13 @@ namespace GPU
 
                 for (int y = minY; y <= maxY; y++)
                 {
-                    float fy = y * heightFactor - 1.0f;
+                    float fy = y / (float)output.height * 2.0f - 1.0f;
 
                     for (int x = minX; x <= maxX; x++)
                     {
-                        float fx = x * widthFactor - 1.0f;
+                        float fx = x / (float)output.width * 2.0f - 1.0f;
+
+                        // Calculate barycentric coordinates for the pixel
                         float vec_px = fx - v0.x;
                         float vec_py = fy - v0.y;
 
@@ -419,24 +311,33 @@ namespace GPU
 
                         if (alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1)
                         {
-                            float interpolatedW = alpha * workingTriangle.wTerm.x + beta * workingTriangle.wTerm.y + gamma * workingTriangle.wTerm.z;
+                            // Interpolate the inverse of the W value (for perspective correction)
+                            float invW = 1.0f / ((alpha * workingTriangle.wTerm.x) + (beta * workingTriangle.wTerm.y) + (gamma * workingTriangle.wTerm.z));
 
-                            if (interpolatedW > 0)
+                            if (invW > 0)
                             {
-                                float depthValue = alpha * v0.z + beta * v1.z + gamma * v2.z;
+                                // Interpolate depth
+                                float depthValue = workingTriangle.GetInterpolatedDepth(alpha, beta, gamma);
+
+                                // Check depth
                                 float currentDepth = output.GetDepth(x, y);
 
-                                if (depthValue >= currentDepth)
+                                if (depthValue > currentDepth)
                                 {
                                     output.SetDepthPixel(x, y, depthValue);
 
-                                    // Recheck the depth condition after updating the depth buffer
-                                    currentDepth = output.GetDepth(x, y);
-                                    if (depthValue >= currentDepth)
-                                    {
-                                        RGBA32 color = filter.FragShader(x, y, workingTriangle, (float)triangleRecord.triangleIndex);
-                                        output.SetColorAt(x, y, color);
-                                    }
+                                    // Perspective correct interpolation of UV coordinates
+                                    // we know the imput uvs are perfect because they match
+                                    Vec2 uv = (alpha * (workingTriangle.uv0 / workingTriangle.wTerm.x)
+                                             + beta * (workingTriangle.uv1 / workingTriangle.wTerm.y)
+                                             + gamma * (workingTriangle.uv2 / workingTriangle.wTerm.z))
+                                             * invW;
+
+                                    RGBA32 color = filter.FragShader(uv.x, uv.y, workingTriangle, (depthValue + 1.0f) * 0.5f, textures);
+                                    //RGBA32 color = filter.FragShader(uv.x, uv.y, workingTriangle, alpha, textures);
+                                    //RGBA32 color = filter.FragShader(uv.x, uv.y, workingTriangle, beta, textures);
+                                    //RGBA32 color = filter.FragShader(uv.x, uv.y, workingTriangle, gamma, textures);
+                                    output.SetColorAt(x, y, color);
                                 }
                             }
                         }
@@ -444,86 +345,167 @@ namespace GPU
                 }
             }
         }
-
     }
 
     public partial class Renderer
     {
+        private Stopwatch clearStopwatch = new Stopwatch();
+        private Stopwatch transformStopwatch = new Stopwatch();
+        private Stopwatch tileCacheFillStopwatch = new Stopwatch();
+        private Stopwatch drawStopwatch = new Stopwatch();
+        
+        private double totalClearTime = 0;
+        private double totalTransformTime = 0;
+        private double totalFillTileCacheTime = 0;
+        private double totalDrawTime = 0;
+        private int sampleCount = 0;
+
         private TileCache tileCache;
+        public static bool timeEachStep = false;
 
         // this function draws multiple meshes to the output with the shader ITriangleImageFilterTiled on the gpu
-        public void ExecuteTriangleFilterMany<TFunc>(GPUFrameBuffer output, GPUMeshBatch meshes, TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
+        public void ExecuteTriangleFilterMany<TFunc>(GPUFrameBuffer output, GPUMeshBatch meshes, GPUMegaTexture textures, TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
-            int widthInTiles = output.width / ITriangleImageFilterTiled.tileSize;
-            int heightInTiles = output.height / ITriangleImageFilterTiled.tileSize;
-            int numTiles = (widthInTiles) * (heightInTiles);
+            int widthInTiles = output.width / RasterisationSettings.tileSize;
+            int heightInTiles = output.height / RasterisationSettings.tileSize;
+            int numTiles = widthInTiles * heightInTiles;
 
-            if(tileCache == null)
+            if (tileCache == null)
             {
                 tileCache = new TileCache(this, widthInTiles, heightInTiles);
             }
             else
             {
-                if(tileCache.heightInTiles != heightInTiles || tileCache.widthInTiles != widthInTiles)
+                if (tileCache.heightInTiles != heightInTiles || tileCache.widthInTiles != widthInTiles)
                 {
                     tileCache.Dispose();
                     tileCache = new TileCache(this, widthInTiles, heightInTiles);
                 }
             }
 
-            var transformKernel = GetTileCacheTransformTrianglesKernel(filter);
-            var tileSortKernel = GetSortTileCacheKernel();
+            var transformKernel = GetTransformTrianglesKernel(filter);
+            var fillTileCacheKernel = GetFillTileCacheTrianglesKernel();
             var drawKernel = GetTriangleImageFilterManyTileCacheKernel(filter);
             var clearKernel = GetClearFrameBufferKernel(filter);
 
             FrameBuffer framebuffer = output.toDevice(this);
 
-            (ArrayView1D<TileTriangleRecord, Stride1D.Dense> tileTriangles, ArrayView1D<int, Stride1D.Dense> tileTriangleCounts, ArrayView1D<ushort, Stride1D.Dense> tileSortedIndicies) = tileCache.GetCache();
-            
-            meshes.ApplyCamera(filter.GetCameraMat());
-            dMeshBatch deviceMeshes = meshes.toGPU(this);
+            (ArrayView1D<TileTriangleRecord, Stride1D.Dense> tileTriangles, ArrayView1D<int, Stride1D.Dense> tileTriangleCounts) = tileCache.GetCache();
 
+            meshes.ApplyCamera(filter.GetCameraMat());
+
+            // this is where the copy happens
+            dMeshBatch deviceMeshes = meshes.toGPU(this);
+            dMegaTexture deviceTextures = textures.ToGPU(this);
+
+            clearStopwatch.Restart();
             clearKernel(numTiles, framebuffer, filter);
-            transformKernel(deviceMeshes.triangles.IntLength, deviceMeshes, filter, output.width, output.height, tileTriangles, tileTriangleCounts);
-            tileSortKernel(numTiles, tileTriangles, tileTriangleCounts, tileSortedIndicies);
-            drawKernel(numTiles, numTiles, framebuffer, deviceMeshes, tileTriangles, tileTriangleCounts, tileSortedIndicies, filter);
+            if(timeEachStep)
+            {
+                device.Synchronize();
+            }
+            clearStopwatch.Stop();
+
+            transformStopwatch.Restart();
+
+            int totalTriangles = deviceMeshes.triangles.IntLength;
+            int transformGroupDim = Math.Min(RasterisationSettings.transformGroupSize, device.MaxNumThreadsPerGroup);
+            int transforGridDim = (totalTriangles + transformGroupDim - 1) / transformGroupDim;
+            KernelConfig kernelConfig = new KernelConfig(transforGridDim, transformGroupDim);
+
+            transformKernel(kernelConfig, totalTriangles, deviceMeshes, filter, output.width, output.height, tileTriangles, tileTriangleCounts);
+            if (timeEachStep)
+            {
+                device.Synchronize();
+            }
+            transformStopwatch.Stop();
+
+            tileCacheFillStopwatch.Restart();
+
+            int fillGroupDim = Math.Min(RasterisationSettings.tileFillGroupSize, device.MaxNumThreadsPerGroup);
+            int fillGridDim = (totalTriangles + fillGroupDim - 1) / fillGroupDim;
+            KernelConfig fillKernelConfig = new KernelConfig(fillGridDim, fillGroupDim);
+
+            fillTileCacheKernel(fillKernelConfig, totalTriangles, deviceMeshes, output.width, output.height, tileTriangles, tileTriangleCounts);
+            if (timeEachStep)
+            {
+                device.Synchronize();
+            }
+            tileCacheFillStopwatch.Stop();
+
+            drawStopwatch.Restart();
+
+            int drawGroupDim = Math.Min(RasterisationSettings.drawFillGroupSize, device.MaxNumThreadsPerGroup);
+            int drawGridDim = (numTiles + drawGroupDim - 1) / drawGroupDim;
+            KernelConfig drawKernelConfig = new KernelConfig(drawGridDim, drawGroupDim);
+
+            drawKernel(drawKernelConfig, numTiles, framebuffer, deviceMeshes, deviceTextures, tileTriangles, tileTriangleCounts, filter);
+            if (timeEachStep)
+            {
+                device.Synchronize();
+            }
+            drawStopwatch.Stop();
+
+            UpdateKernelTimings(clearStopwatch.Elapsed.TotalMilliseconds, transformStopwatch.Elapsed.TotalMilliseconds, tileCacheFillStopwatch.Elapsed.TotalMilliseconds, drawStopwatch.Elapsed.TotalMilliseconds);
         }
 
+        private void UpdateKernelTimings(double clearTime, double transformTime, double fillTileCacheTime, double drawTime)
+        {
+            if(timeEachStep)
+            {
+                totalClearTime += clearTime;
+                totalTransformTime += transformTime;
+                totalFillTileCacheTime += fillTileCacheTime;
+                totalDrawTime += drawTime;
+                sampleCount++;
+            }
+        }
+
+        public (double averageClearTime, double averageTransformTime, double averageFillTileCacheTime, double averageDrawTime, double averageTotalTime, int sampleCount) CalculateRasterizationKernelTimings()
+        {
+            double averageClearTime = totalClearTime / sampleCount;
+            double averageTransformTime = totalTransformTime / sampleCount;
+            double averageFillTileCacheTime = totalFillTileCacheTime / sampleCount;
+            double averageDrawTime = totalDrawTime / sampleCount;
+
+            double averageTotalTime = (averageClearTime + averageTransformTime + averageFillTileCacheTime + averageDrawTime);
+
+            return (averageClearTime, averageTransformTime, averageFillTileCacheTime, averageDrawTime, averageTotalTime, sampleCount);
+        }
 
         // this caches the gpu kernel for the vert shader kernel for each shader
-        private Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, TFunc> GetTriangleImageFilterManyTileCacheKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
+        private Action<KernelConfig, int, FrameBuffer, dMeshBatch, dMegaTexture, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc> GetTriangleImageFilterManyTileCacheKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, ITriangleImageFilterTiled
         {
             if (!kernels.ContainsKey(filter.GetType()))
             {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, TFunc>(TriangleImageFilterManyTileCacheKernel);
+                var kernel = device.LoadStreamKernel<int, FrameBuffer, dMeshBatch, dMegaTexture, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>(TriangleImageFilterManyTileCacheKernel);
                 kernels.Add(filter.GetType(), kernel);
             }
 
-            return (Action<Index1D, int, FrameBuffer, dMeshBatch, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, TFunc>)kernels[filter.GetType()];
+            return (Action<KernelConfig, int, FrameBuffer, dMeshBatch, dMegaTexture, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, TFunc>)kernels[filter.GetType()];
         }
 
-        private Action<Index1D, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>> GetSortTileCacheKernel()
+        private Action<KernelConfig, int, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> GetTransformTrianglesKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVertShader
         {
-            if (!kernels.ContainsKey(typeof(ushort)))
-            {
-                // sorting is slower, for now we skip sorting
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>>(NoSortTriangleTiles);
-                kernels.Add(typeof(ushort), kernel);
-            }
-
-            return (Action<Index1D, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>>)kernels[typeof(ushort)];
-        }
-
-        private Action<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> GetTileCacheTransformTrianglesKernel<TFunc>(TFunc filter = default) where TFunc : unmanaged, IVertShader
-        {
-
+            // todo make this not use TileCache because it only works for one filter
             if (!kernels.ContainsKey(typeof(TileCache)))
             {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>(TileCache.TransformTrianglesKernel);
+                var kernel = device.LoadStreamKernel<int, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>(TileCache.TransformTrianglesKernel);
                 kernels.Add(typeof(TileCache), kernel);
             }
 
-            return (Action<Index1D, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>)kernels[typeof(TileCache)];
+            return (Action<KernelConfig, int, dMeshBatch, TFunc, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>)kernels[typeof(TileCache)];
+        }
+
+        Action<KernelConfig, int, dMeshBatch, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> fillTileCacheTrianglesKernel = null;
+        private Action<KernelConfig, int, dMeshBatch, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>> GetFillTileCacheTrianglesKernel()
+        {
+            if (fillTileCacheTrianglesKernel == null)
+            {
+                fillTileCacheTrianglesKernel = device.LoadStreamKernel<int, dMeshBatch, int, int, ArrayView1D<TileTriangleRecord, Stride1D.Dense>, ArrayView1D<int, Stride1D.Dense>>(TileCache.PerTriangleFillTileCachesKernel);
+            }
+
+            return fillTileCacheTrianglesKernel;
         }
 
         // this caches the gpu kernel for the clear frame kernel for each shader

@@ -4,13 +4,13 @@
     {
         public int meshID;
         public int triangleIndex;
-        public float depth;
+        public int globalTriangleIndex;
 
-        public TileTriangleRecord(int meshID, int triangleIndex, float depth)
+        public TileTriangleRecord(int meshID, int triangleIndex, int globalTriangleIndex)
         {
             this.meshID = meshID;
             this.triangleIndex = triangleIndex;
-            this.depth = depth;
+            this.globalTriangleIndex = globalTriangleIndex;
         }
     }
 }

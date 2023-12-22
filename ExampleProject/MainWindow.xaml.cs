@@ -26,31 +26,37 @@ namespace ExampleProject
             AddRenderModes();
         }
 
-        public void AddRenderModes(int default_mode = 9)
+        public void AddRenderModes(int default_mode = 11)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
             renderManager.AddRenderCallback(1, new DrawCircles());
-            renderManager.AddRenderCallback(2, new GOL());
-            renderManager.AddRenderCallback(3, new Fractal());
-            renderManager.AddRenderCallback(4, new Particles());
-            renderManager.AddRenderCallback(5, new ImageFilter());
-            renderManager.AddRenderCallback(6, new DebugRT());
-            renderManager.AddRenderCallback(7, new VideoStreamingMode());
-            renderManager.AddRenderCallback(8, new MeshRenderer());
-            renderManager.AddRenderCallback(9, new SDF());
+            renderManager.AddRenderCallback(2, new BouncingCircles());
+            renderManager.AddRenderCallback(3, new GOL());
+            renderManager.AddRenderCallback(4, new Fractal());
+            renderManager.AddRenderCallback(5, new TexturedCube());
+            renderManager.AddRenderCallback(6, new Particles());
+            renderManager.AddRenderCallback(7, new MegaTextureTest());
+            renderManager.AddRenderCallback(8, new ImageFilter());
+            renderManager.AddRenderCallback(9, new DebugRT());
+            renderManager.AddRenderCallback(10, new VideoStreamingMode());
+            renderManager.AddRenderCallback(11, new MeshRenderer());
+            renderManager.AddRenderCallback(12, new SDF());
 
             mode.ItemsSource = new string[] 
             {
                 "Debug",
                 "Draw Circles",
+                "Bouncing Circles",
                 "Game of Life",
                 "Fractal",
+                "Textured Mesh Renderer",
                 "Particle Sim",
+                "Mega Texture Test",
                 "Image Filter",
                 "DebugRT",
                 "Video Streaming Mode",
                 "Mesh Renderer",
-                "SDF Renderer"
+                "SDF Renderer",
             };
             
 

@@ -57,6 +57,16 @@ namespace GPU
             a = 255;
         }
 
+
+        public RGBA32(float x, float y, float z, float a)
+        {
+            r = (byte)(x * 255);
+            g = (byte)(y * 255);
+            b = (byte)(z * 255);
+            a = (byte)(a * 255);
+        }
+
+
         public RGBA32(float x)
         {
             r = (byte)(x * 255);
@@ -87,6 +97,58 @@ namespace GPU
                 (byte)(a.a + t * (b.a - a.a))
             );
         }
+
+        public byte this[int index]
+        {
+            get
+            {
+                switch (index)
+                {
+                    case 0: return r;
+                    case 1: return g;
+                    case 2: return b;
+                    case 3: return a;
+                    default: return 0;
+                }
+            }
+            set
+            {
+                switch (index)
+                {
+                    case 0: r = value; break;
+                    case 1: g = value; break;
+                    case 2: b = value; break;
+                    case 3: a = value; break;
+                    default: break;
+                }
+            }
+        }
+
+        public static bool operator ==(RGBA32 left, RGBA32 right)
+        {
+            return left.r == right.r && left.g == right.g && left.b == right.b && left.a == right.a;
+        }
+
+        public static bool operator !=(RGBA32 left, RGBA32 right)
+        {
+            return !(left == right);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is RGBA32)
+            {
+                RGBA32 other = (RGBA32)obj;
+                return this == other;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return r.GetHashCode() ^ g.GetHashCode() ^ b.GetHashCode() ^ a.GetHashCode();
+        }
+
 
     }
 }

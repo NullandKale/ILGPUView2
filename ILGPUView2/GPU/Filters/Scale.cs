@@ -13,6 +13,48 @@ namespace ILGPUView2.GPU.Filters
         }
     }
 
+    public struct AverageScale : IImageMask
+    {
+        public RGBA32 Apply(int tick, float u, float v, dImage output, dImage input)
+        {
+            // Calculate the corresponding region in the input image
+            float inputUStart = u * input.width;
+            float inputVStart = v * input.height;
+            float inputUEnd = (u + 1.0f / output.width) * input.width;
+            float inputVEnd = (v + 1.0f / output.height) * input.height;
+
+            Vec3 totalColor = new Vec3(0, 0, 0);
+            int sampleCount = 0;
+
+            // Iterate over the pixels in the corresponding region
+            for (int iy = (int)inputVStart; iy < inputVEnd; iy++)
+            {
+                for (int ix = (int)inputUStart; ix < inputUEnd; ix++)
+                {
+                    // Add the color of each input pixel
+                    Vec3 pixelColor = input.GetPixel(ix, iy);
+                    totalColor += pixelColor;
+                    sampleCount++;
+                }
+            }
+
+            if (sampleCount > 0)
+            {
+                // Calculate the average color
+                Vec3 avgColor = totalColor / sampleCount;
+
+                return new RGBA32(avgColor.x, avgColor.y, avgColor.z);
+            }
+            else
+            {
+                // Return black if no samples were taken
+                return new RGBA32(0, 0, 0);
+            }
+        }
+    }
+
+
+
     public unsafe struct ScaleLanczos : IImageMask
     {
         private float sigma = 1.0f;

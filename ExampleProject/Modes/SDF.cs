@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics;
 using ILGPU.Algorithms;
 using System.Reflection.Emit;
+using ExampleProject.Modes;
 
 namespace ExampleProject.Modes
 {
@@ -65,6 +66,25 @@ namespace ExampleProject.Modes
 
     public static class SDFUtils
     {
+        public static float SDF(int type, Vec3 transformedPoint, float param1, float param2, float param3)
+        {
+            switch (type)
+            {
+                case 0:
+                    return SphereSDF(transformedPoint, param1);
+                case 1:
+                    return BoxSDF(transformedPoint, new Vec3(param1, param2, param3));
+                case 2:
+                    return CylinderSDF(transformedPoint, param1, param2);
+                case 3:
+                    return ConeSDF(transformedPoint, param1, param2);
+                case 4:
+                    return TorusSDF(transformedPoint, param1, param2);
+                default:
+                    return 0;
+            }
+        }
+
         // Sphere SDF
         public static float SphereSDF(Vec3 p, float radius)
         {
@@ -138,6 +158,7 @@ namespace ExampleProject.Modes
         {
             Random rng = new Random(0);
 
+            // generates numPrimitives random objects
             for (int i = 0; i < numPrimitives; i++)
             {
                 types[i] = rng.Next(0, 4);  // 0 for sphere, 1 for box, 2 for cylinder, 3 for cone, 4 for torus
@@ -194,6 +215,31 @@ namespace ExampleProject.Modes
             cameraPos = newPos;
         }
 
+        private (float distance, int primitiveIndex) CalculateClosestDistance(Vec3 point)
+        {
+            float closestDistance = float.MaxValue;
+            int closestPrimitive = -1;
+
+            for (int j = 0; j < numPrimitives; ++j)
+            {
+                fixed (float* matrixPtr = &modelMatricies[j * 16])
+                {
+                    Mat4x4* modelMatrix = (Mat4x4*)matrixPtr;
+                    Vec3 transformedPoint = modelMatrix->MultiplyVector(point);
+
+                    float d = SDFUtils.SDF(types[j], transformedPoint, param1[j], param2[j], param3[j]);
+
+                    if (d < closestDistance)
+                    {
+                        closestDistance = d;
+                        closestPrimitive = j;
+                    }
+                }
+            }
+
+            return (closestDistance, closestPrimitive);
+        }
+
         public RGBA32 Apply(int tick, float x, float y, dImage output)
         {
             float aspectRatio = (float)output.width / (float)output.height;
@@ -201,54 +247,13 @@ namespace ExampleProject.Modes
             Vec3 rayDir = new Vec3((x - 0.5f) * aspectRatio, y - 0.5f, 1).Normalize();
 
             float t = 0;
-            float maxDistance = 100.0f; // Max distance for early exit
+            float maxDistance = 50.0f; // Max distance for early exit
 
-            for (int i = 0; i < 128; ++i) // Increased max steps as adaptive stepping can take smaller steps
+            for (int i = 0; i < 64; ++i)
             {
                 Vec3 point = rayOrigin + rayDir * t;
 
-                float closestDistance = float.MaxValue;
-                int closestPrimitive = -1;
-
-                for (int j = 0; j < numPrimitives; ++j)
-                {
-                    // modelMatricies is a fixed float[] in this struct
-                    fixed (float* matrixPtr = &modelMatricies[j * 16])
-                    {
-                        // Mat4x4 is just a fixed float[] as well, so we can just reinterpret cast the memory
-                        Mat4x4* modelMatrix = (Mat4x4*)matrixPtr;
-
-                        Vec4 transformedPoint4D = modelMatrix->MultiplyVector(point);
-
-                        float d = 0;
-                        if (types[j] == 0)
-                        {
-                            d = SDFUtils.SphereSDF(transformedPoint4D, param1[j]);
-                        }
-                        else if (types[j] == 1)
-                        {
-                            d = SDFUtils.BoxSDF(transformedPoint4D, new Vec3(param1[j], param2[j], param3[j]));
-                        }
-                        else if (types[j] == 2)
-                        {
-                            d = SDFUtils.CylinderSDF(transformedPoint4D, param1[j], param2[j]);
-                        }
-                        else if (types[j] == 3)
-                        {
-                            d = SDFUtils.ConeSDF(transformedPoint4D, param1[j], param2[j]);
-                        }
-                        else if (types[j] == 4)
-                        {
-                            d = SDFUtils.TorusSDF(transformedPoint4D, param1[j], param2[j]);
-                        }
-
-                        if (d < closestDistance)
-                        {
-                            closestDistance = d;
-                            closestPrimitive = j;
-                        }
-                    }
-                }
+                (float closestDistance, int closestPrimitive) = CalculateClosestDistance(point);
 
                 if (closestDistance < 0.001f && closestPrimitive != -1) // We hit the surface
                 {

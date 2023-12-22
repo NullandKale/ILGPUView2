@@ -11,6 +11,9 @@ namespace UIElement
         public RenderWindow renderWindow;
         public int currentRenderMode;
 
+        private (int x, int y) desiredWindowPos;
+        private bool needsUpdate = false;
+
         public RenderManager()
         {
             renderModes = new Dictionary<int, IRenderCallback>();
@@ -45,6 +48,14 @@ namespace UIElement
             }
         }
 
+        public void Update()
+        {
+            renderWindow.Dispatcher.Invoke(() =>
+            {
+                renderWindow.SetPosition(desiredWindowPos.x, desiredWindowPos.y);
+            });
+        }
+
         public void Dispose()
         {
             if (renderWindow != null)
@@ -67,6 +78,12 @@ namespace UIElement
         public void SetRenderModeMode(int val)
         {
             GetRenderCallback()?.SetMode(val);
+        }
+
+        public void UpdateWindowPos(int xPos, int yPos)
+        {
+            desiredWindowPos = (xPos, yPos);
+            needsUpdate = true;
         }
     }
 }

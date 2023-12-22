@@ -12,25 +12,6 @@ namespace GPU
 {
     public static partial class Kernels
     {
-        public interface IKernel<T> where T : unmanaged
-        {
-            void Apply(int tick, int index, dBuffer<T> dBuffer);
-        }
-        public interface IKernelMask<T> where T : unmanaged
-        {
-            void Apply(int tick, int index, dImage framebuffer, dBuffer<T> dBuffer);
-        }
-
-        public static void KernelKernel<TFunc, T>(Index1D index, int tick, dBuffer<T> output, TFunc filter) where TFunc : unmanaged, IKernel<T> where T : unmanaged
-        {
-            filter.Apply(tick, index.X, output);
-        }
-
-        public static void KernelMaskKernel<TFunc, T>(Index1D index, int tick, dImage framebuffer, dBuffer<T> output, TFunc filter) where TFunc : unmanaged, IKernelMask<T> where T : unmanaged
-        {
-            filter.Apply(tick, index, framebuffer, output);
-        }
-
         public static void ImageToRGB(Index1D index, ArrayView1D<byte, Stride1D.Dense> output, dImage input)
         {
             int x = index.X % input.width;

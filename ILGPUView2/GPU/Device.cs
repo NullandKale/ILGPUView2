@@ -41,6 +41,7 @@ namespace GPU
         protected Stopwatch timer;
         protected Queue<double> frameTimes = new Queue<double>();
         protected double frameTimeSum = 0;
+        public double frameTimeAverage = 0;
 
         public Renderer(RenderFrame renderFrame)
         {
@@ -149,7 +150,7 @@ namespace GPU
         {
             timer.Stop();
 
-            if (frameTimes.Count > 10)
+            if (frameTimes.Count > 10000)
             {
                 double f = frameTimes.Dequeue();
                 frameTimeSum -= f;
@@ -157,48 +158,15 @@ namespace GPU
 
             frameTimes.Enqueue(timer.Elapsed.TotalMilliseconds);
             frameTimeSum += timer.Elapsed.TotalMilliseconds;
+            frameTimeAverage = frameTimeSum / frameTimes.Count;
+
         }
 
         private string GetTimerString()
         {
-            double frameTimeMS = frameTimeSum / frameTimes.Count;
-            double FPS = 1000.0 / frameTimeMS;
+            double FPS = 1000.0 / frameTimeAverage;
 
-            return $"FPS: {FPS:0.00} {(frameTimeMS):0.00}MS";
-        }
-
-        public void Execute<T, TFunc>(GPUBuffer<T> GPUBuffer, TFunc func = default) where T : unmanaged where TFunc : unmanaged, IKernel<T>
-        {
-            var kernel = GetKernel<T, TFunc>(func);
-            kernel((int)GPUBuffer.size, ticks, GPUBuffer.toGPU(), func);
-        }
-
-        private Action<Index1D, int, dBuffer<T>, TFunc> GetKernel<T, TFunc>(TFunc filter = default) where TFunc : unmanaged, IKernel<T> where T : unmanaged
-        {
-            if (!kernels.ContainsKey(filter.GetType()))
-            {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dBuffer<T>, TFunc>(Kernels.KernelKernel);
-                kernels.Add(filter.GetType(), kernel);
-            }
-
-            return (Action<Index1D, int, dBuffer<T>, TFunc>)kernels[filter.GetType()];
-        }
-
-        public void ExecuteMask<T, TFunc>(GPUImage output, GPUBuffer<T> GPUBuffer, TFunc func = default) where T : unmanaged where TFunc : unmanaged, IKernelMask<T>
-        {
-            var kernel = GetKernelMask<T, TFunc>(func);
-            kernel((int)GPUBuffer.size, ticks, output.toDevice(this), GPUBuffer.toGPU(), func);
-        }
-
-        private Action<Index1D, int, dImage, dBuffer<T>, TFunc> GetKernelMask<T, TFunc>(TFunc filter = default) where TFunc : unmanaged, IKernelMask<T> where T : unmanaged
-        {
-            if (!kernels.ContainsKey(filter.GetType()))
-            {
-                var kernel = device.LoadAutoGroupedStreamKernel<Index1D, int, dImage, dBuffer<T>, TFunc>(Kernels.KernelMaskKernel);
-                kernels.Add(filter.GetType(), kernel);
-            }
-
-            return (Action<Index1D, int, dImage, dBuffer<T>, TFunc>)kernels[filter.GetType()];
+            return $"FPS: {FPS:0.00} {(frameTimeAverage):0.00}MS";
         }
 
         public void ExecuteDepthFilter(GPUImage output, FilterDepth filter)

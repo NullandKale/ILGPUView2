@@ -79,22 +79,21 @@ namespace GPU
 
         public Vec4 MultiplyVector(Vec4 vec)
         {
-            float x = Get(0) * vec.x + Get(4) * vec.y + Get(8) * vec.z + Get(12) * vec.w;
-            float y = Get(1) * vec.x + Get(5) * vec.y + Get(9) * vec.z + Get(13) * vec.w;
-            float z = Get(2) * vec.x + Get(6) * vec.y + Get(10) * vec.z + Get(14) * vec.w;
-            float w = Get(3) * vec.x + Get(7) * vec.y + Get(11) * vec.z + Get(15) * vec.w;
+            float x = d0 * vec.x + d4 * vec.y + d8 * vec.z + d12 * vec.w;
+            float y = d1 * vec.x + d5 * vec.y + d9 * vec.z + d13 * vec.w;
+            float z = d2 * vec.x + d6 * vec.y + d10 * vec.z + d14 * vec.w;
+            float w = d3 * vec.x + d7 * vec.y + d11 * vec.z + d15 * vec.w;
 
             return new Vec4(x, y, z, w);
         }
 
-        public Vec4 MultiplyVector(Vec3 vec)
+        public Vec3 MultiplyVector(Vec3 vec)
         {
-            float x = Get(0) * vec.x + Get(4) * vec.y + Get(8) * vec.z + Get(12);
-            float y = Get(1) * vec.x + Get(5) * vec.y + Get(9) * vec.z + Get(13);
-            float z = Get(2) * vec.x + Get(6) * vec.y + Get(10) * vec.z + Get(14);
-            float w = Get(3) * vec.x + Get(7) * vec.y + Get(11) * vec.z + Get(15);
+            float x = d0 * vec.x + d4 * vec.y + d8 * vec.z + d12;
+            float y = d1 * vec.x + d5 * vec.y + d9 * vec.z + d13;
+            float z = d2 * vec.x + d6 * vec.y + d10 * vec.z + d14;
 
-            return new Vec4(x, y, z, w);
+            return new Vec3(x, y, z);
         }
 
         public GPU.Triangle MultiplyTriangle(GPU.Triangle tri)
@@ -315,6 +314,11 @@ namespace GPU
             return v1 * (1.0f / v);
         }
 
+        public static implicit operator Vec2(Vector2 v)
+        {
+            return new Vec2(v.X, v.Y);
+        }
+
         public float Dot(Vec2 other)
         {
             return (x * other.x) + (y * other.y);
@@ -348,6 +352,17 @@ namespace GPU
         public static Vec2 Abs(Vec2 q)
         {
             return new Vec2(XMath.Abs(q.x), XMath.Abs(q.y));
+        }
+
+        public static Vec2 Normalize(Vec2 vec)
+        {
+            float length = vec.length();
+            if (length == 0)
+            {
+                // Return a zero vector if the original vector is zero-length
+                return new Vec2(0, 0);
+            }
+            return vec / length;
         }
     }
 

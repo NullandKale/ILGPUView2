@@ -5,6 +5,8 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using ILGPU.Algorithms;
 using System.Linq;
+using System.Text;
+using System.IO;
 
 namespace GPU
 {
@@ -486,8 +488,8 @@ namespace GPU
 
         public static byte[] BitmapToBytes(Bitmap bitmap)
         {
-            Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
-            BitmapData bitmapData = bitmap.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+            Rectangle rectangle = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+            BitmapData bitmapData = bitmap.LockBits(rectangle, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
 
             int size = bitmapData.Width * bitmap.Height * 4;
             byte[] data = new byte[size];
@@ -534,5 +536,63 @@ namespace GPU
             return a + (b - a) * t;
         }
 
+    }
+
+    public class GLTFLoader
+    {
+        private readonly string rootDirectory;
+
+        public GLTFLoader(string rootDirectory)
+        {
+            this.rootDirectory = rootDirectory;
+        }
+
+        public List<string> ListAvailableGLTFs()
+        {
+            List<string> availableFiles = new List<string>();
+
+            // Get all subdirectories under the root directory
+            string[] subdirectories = Directory.GetDirectories(rootDirectory);
+
+            foreach (string subdir in subdirectories)
+            {
+                // Check if the subdirectory contains a glTF folder
+                string gltfFolder = Path.Combine(subdir, "glTF");
+                if (Directory.Exists(gltfFolder))
+                {
+                    // List all glTF files within the glTF folder
+                    string[] gltfFiles = Directory.GetFiles(gltfFolder, "*.gltf");
+                    availableFiles.AddRange(gltfFiles);
+                }
+            }
+
+            return availableFiles;
+        }
+
+        public List<string> ListAvailableGLTFNames()
+        {
+            List<string> availableNames = new List<string>();
+
+            string[] subdirectories = Directory.GetDirectories(rootDirectory);
+            foreach (string subdir in subdirectories)
+            {
+                string folderName = new DirectoryInfo(subdir).Name;
+                string gltfFolder = Path.Combine(subdir, "glTF");
+                if (Directory.Exists(gltfFolder))
+                {
+                    availableNames.Add(folderName);
+                }
+            }
+
+            return availableNames;
+        }
+
+
+        public GPUMeshBatch LoadGLTF(string gltfFilePath)
+        {
+            GPUMeshBatch meshBatch = new GPUMeshBatch();
+            meshBatch.LoadGLTF(gltfFilePath);
+            return meshBatch;
+        }
     }
 }

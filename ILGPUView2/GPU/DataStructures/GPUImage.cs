@@ -4,6 +4,8 @@ using ILGPU.Runtime;
 using System;
 using System.Drawing;
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using static GPU.Kernels;
 
 namespace GPU
@@ -37,6 +39,42 @@ namespace GPU
             Buffer.BlockCopy(data, 0, this.data, 0, data.Length);
         }
 
+        public GPUImage(float[,] floatData)
+        {
+            int width = floatData.GetLength(0);
+            int height = floatData.GetLength(1);
+            this.width = width;
+            this.height = height;
+            data = new int[width * height];
+
+            // Find the maximum and minimum values in the floatData for normalization
+            float max = float.MinValue;
+            float min = float.MaxValue;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    max = Math.Max(max, floatData[x, y]);
+                    min = Math.Min(min, floatData[x, y]);
+                }
+            }
+
+            // Normalization factor
+            float range = max - min;
+
+            // Convert the floatData to int[] in RGBA format
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    // Normalize the value between 0 and 255
+                    float normalizedValue = ((floatData[x, y] - min) / range) * 255;
+                    int intValue = (int)normalizedValue;
+                    data[y * width + x] = (255 << 24) | (intValue << 16) | (intValue << 8) | intValue; // RGBA format
+                }
+            }
+        }
+
         public GPUImage(Bitmap b)
         {
             this.width = b.Width;
@@ -44,6 +82,31 @@ namespace GPU
             byte[] data_bytes = Utils.BitmapToBytes(b);
             data = new int[width * height];
             Buffer.BlockCopy(data_bytes, 0, data, 0, data_bytes.Length);
+        }
+
+        public static bool TryLoadFromUrl(string url, out GPUImage image)
+        {
+            try
+            {
+                using (HttpClient httpClient = new HttpClient())
+                {
+                    // Synchronously wait for the task to complete
+                    byte[] data = httpClient.GetByteArrayAsync(url).Result;
+                    using (MemoryStream ms = new MemoryStream(data))
+                    {
+                        using (Bitmap bmp = new Bitmap(ms))
+                        {
+                            image = new GPUImage(bmp);
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                image = null;
+                return false;
+            }
         }
 
         public static bool TryLoad(string file, out GPUImage image)
@@ -118,7 +181,7 @@ namespace GPU
 
         public Bitmap GetBitmap()
         {
-            return Utils.BitmapFromBytes(data, width, height);
+            return Utils.BitmapFromBytes(toCPU(), width, height);
         }
 
         public void Dispose()
@@ -161,6 +224,11 @@ namespace GPU
 
             int index = (y * width + x);
             data[index] = color;
+        }
+
+        public void SetColor(float x, float y, Vec3 color)
+        {
+            SetColorAt((int)(x * width), (int)(y * height), new RGBA32(color));
         }
 
         public void SetColorAt(int x, int y, RGBA32 color)

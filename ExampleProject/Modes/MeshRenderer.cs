@@ -17,6 +17,8 @@ using System.IO;
 using Camera;
 using System.Numerics;
 using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace ExampleProject.Modes
 {
@@ -24,13 +26,30 @@ namespace ExampleProject.Modes
     {
         private GLTFLoader loader;
         private GPUMeshBatch meshes;
+        private GPUMegaTexture textures;
         private GPUFrameBuffer frameBuffer;
         private float fov = 75;
+
+        private Label stats;
+        private Label totalTime;
+        private Label clearTime;
+        private Label transformTime;
+        private Label cacheFillTime;
+        private Label drawTime;
 
         public void CreateUI()
         {
             UIBuilder.Clear();
-            UIBuilder.AddLabel("Debug Renderer");
+            stats = UIBuilder.AddLabel("Rasterization Stats:");
+            totalTime = UIBuilder.AddLabel("Total time: ");
+            clearTime = UIBuilder.AddLabel("Clear time: ");
+            transformTime = UIBuilder.AddLabel("Transform time: ");
+            cacheFillTime = UIBuilder.AddLabel("Tile Cache Fill time: ");
+            drawTime = UIBuilder.AddLabel("Draw time: ");
+            UIBuilder.AddButton("Time Rendering", () =>
+            {
+                Renderer.timeEachStep = !Renderer.timeEachStep;
+            });
 
             string rootDirectory = @"..\..\..\Assets\glTF-Sample-Models\2.0\";
 
@@ -64,6 +83,8 @@ namespace ExampleProject.Modes
             {
                 fov = val;
             });
+
+            textures = MegaTextureTest.loadTest();
         }
 
         public void OnKeyPressed(Key key, ModifierKeys modifiers)
@@ -71,12 +92,31 @@ namespace ExampleProject.Modes
 
         }
 
-        public void OnLateRender(GPU.Renderer gpu)
+        public void OnLateRender(Renderer gpu)
         {
-
+            var data = gpu.CalculateRasterizationKernelTimings();
+            Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if(Renderer.timeEachStep)
+                {
+                    totalTime.Content = "Total time: " + data.averageTotalTime.ToString("F3") + " ms";
+                    clearTime.Content = "Clear time: " + data.averageClearTime.ToString("F3") + " ms";
+                    transformTime.Content = "Transform time: " + data.averageTransformTime.ToString("F3") + " ms";
+                    cacheFillTime.Content = "Tile Cache Fill time: " + data.averageFillTileCacheTime.ToString("F3") + " ms";
+                    drawTime.Content = "Draw time: " + data.averageDrawTime.ToString("F3") + " ms";
+                }
+                else
+                {
+                    totalTime.Content = "";
+                    clearTime.Content = "";
+                    transformTime.Content = "";
+                    cacheFillTime.Content = "";
+                    drawTime.Content = "";
+                }
+            });
         }
 
-        public void OnRender(GPU.Renderer gpu)
+        public void OnRender(Renderer gpu)
         {
             if(frameBuffer == null || frameBuffer.width != gpu.framebuffer.width || frameBuffer.height != gpu.framebuffer.height)
             {
@@ -85,52 +125,88 @@ namespace ExampleProject.Modes
 
             if(frameBuffer != null)
             {
-                float angle = ((gpu.ticks / 3.0f) % 360.0f) * (MathF.PI / 180.0f);
-                float camX = MathF.Sin(angle);
-                float camZ = MathF.Cos(angle);
+                float angle = ((gpu.ticks / 5.0f) % 360.0f) * (MathF.PI / 180.0f);
+                float radius = 1.25f;
+                float camX = MathF.Sin(angle) * radius;
+                float camZ = MathF.Cos(angle) * radius;
                 Vec3 cameraPos = new Vec3(camX, 0, camZ);
                 Vec3 up = new Vec3(0, 1, 0);
                 Vec3 lookAt = new Vec3(0, 0, 0);
 
+                gpu.ExecuteTriangleFilterMany(frameBuffer, meshes, textures,
+                    new DrawTrianglesTiled(cameraPos, up, lookAt, frameBuffer.width, frameBuffer.height, fov, 0.01f, 1000, gpu.ticks));
 
-                gpu.ExecuteTriangleFilterMany(frameBuffer, meshes, new DrawTrianglesTiled(cameraPos, up, lookAt, frameBuffer.width, frameBuffer.height, fov, 0.1f, 1000, gpu.ticks));
                 gpu.ExecuteFramebufferMask<FrameBufferCopy>(gpu.framebuffer, frameBuffer.toDevice(gpu));
             }
         }
 
-        public void OnStart(GPU.Renderer gpu)
+        public void OnStart(Renderer gpu)
         {
             meshes = new GPUMeshBatch();
 
-            AddConcentricCirclesOfCats(1, new Vec3(), 0, new Vec3(1, 1, 1));
-            AddConcentricCirclesOfCats(25, new Vec3(), 1.5f, new Vec3(0.3, 0.3, 0.3));
-            AddConcentricCirclesOfCats(50, new Vec3(), 2f, new Vec3(0.3, 0.3, 0.3));
-            AddConcentricCirclesOfCats(100, new Vec3(), 2.5f, new Vec3(0.1, 0.1, 0.1));
-            AddConcentricCirclesOfCats(100, new Vec3(), 3f, new Vec3(0.1, 0.1, 0.1));
-            //AddConcentricCirclesOfCats(150, new Vec3(), 3.5f, new Vec3(0.1, 0.1, 0.1));
-            //AddConcentricCirclesOfCats(150, new Vec3(), 4f, new Vec3(0.1, 0.1, 0.1));
-            //AddConcentricCirclesOfCats(150, new Vec3(), 6f, new Vec3(0.1, 0.1, 0.1));
-            //AddConcentricCirclesOfCats(150, new Vec3(), 8f, new Vec3(0.1, 0.1, 0.1));
+            float spacing = 0.6f;
+            float scaleRatio = 0.25f;
+            //int triangleMinimum = 4000;
+            //int triangleMinimum = 500000;
+            int triangleMinimum = 750000;
 
-            Trace.WriteLine("Loaded: " + meshes.triangleCount);
+            AddCatsInCylinder(triangleMinimum, new Vec3(0, 0.1, 0), spacing, scaleRatio);
+
+            Trace.WriteLine("Actually Loaded Triangles: " + meshes.triangleCount);
+
+            Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                stats.Content = "Rasterizing " + meshes.triangleCount + " triangles:";
+            });
         }
 
-        public void AddGridOfCubes(int count, Vec3 centerPos, float minDistBetweenObjects, Vec3 scale)
+        public void AddCatsInCylinder(int triangleLimit, Vec3 start, float spacing, float scaleRatio)
         {
-            int sideCount = (int)Math.Sqrt(count);
-            float offset = minDistBetweenObjects;
-            float halfGrid = (sideCount - 1) * offset / 2.0f;  // Half the size of the grid
+            int layer = 0;
+            bool reachedLimit = false;
+            Vec3 scale = new Vec3(spacing * scaleRatio, spacing * scaleRatio, spacing * scaleRatio);
+            Random rng = new Random(0);
+            
+            GPUMesh cat = GPUMesh.LoadObjTriangles("Assets/cat.obj");
+            //GPUMesh cat = GPUMesh.CreateCube();
 
-            for (int i = 0; i < sideCount; i++)
+            while (true)
             {
-                for (int j = 0; j < sideCount; j++)
+                bool addedInThisLayer = false;
+
+                int catsInRing = layer > 0 ? (int)(2.0 * Math.PI * layer / spacing) : 1; // Calculate number of cats in the current ring
+
+                for (int j = -layer; j <= layer; j++) // Iterate over height
                 {
-                    GPUMesh cube = GPUMesh.CreateCube();
-                    Vec3 position = new Vec3(centerPos.x + i * offset - halfGrid, centerPos.y, centerPos.z + j * offset - halfGrid);
-                    cube.SetPos(position.x, position.y, position.z);
-                    cube.SetScale(scale.x, scale.y, scale.z);
-                    meshes.AddMesh(cube);
+                    for (int i = 0; i < catsInRing; i++) // Iterate over circumference
+                    {
+                        float angle = i * 2.0f * (float)Math.PI / catsInRing;
+                        float radius = layer * spacing;
+                        float x = start.x + radius * MathF.Cos(angle);
+                        float y = start.y + j * spacing * 0.60f; // Adjust the y to fit the aspect ratio
+                        float z = start.z + radius * MathF.Sin(angle);
+
+                        cat.SetPos(x, y, z);
+                        cat.SetScale(scale.x, scale.y, scale.z);
+                        cat.SetRot((float)rng.NextDouble() * 360.0f, (float)rng.NextDouble() * 360.0f, (float)rng.NextDouble() * 360.0f);
+            
+                        meshes.AddMesh(cat);
+
+                        addedInThisLayer = true;
+
+                        if (meshes.triangleCount >= triangleLimit)
+                        {
+                            reachedLimit = true;
+                        }
+                    }
                 }
+
+                if (!addedInThisLayer || reachedLimit)
+                {
+                    break; // Stop if no cats were added in this layer or if the limit has been reached
+                }
+
+                layer++; // Increase the layer for the next iteration
             }
         }
 
