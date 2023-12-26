@@ -1,7 +1,7 @@
-﻿using Camera;
-using GPU;
+﻿using GPU;
 using ILGPU;
 using ILGPU.Runtime;
+using ILGPUView2.GPU.DataStructures;
 using System;
 using System.Collections.Generic;
 using System.Linq;

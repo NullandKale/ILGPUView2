@@ -1,5 +1,4 @@
-﻿using Camera;
-using ILGPU;
+﻿using ILGPU;
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using ILGPU.Runtime.Cuda;

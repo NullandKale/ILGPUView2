@@ -8,7 +8,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static GPU.Kernels;
-using Camera;
 using System.Windows.Shapes;
 using System.Windows;
 using ILGPU.Algorithms;

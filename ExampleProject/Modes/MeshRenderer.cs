@@ -14,7 +14,6 @@ using ILGPU.Algorithms;
 using System.Reflection.Metadata;
 using System;
 using System.IO;
-using Camera;
 using System.Numerics;
 using System.Diagnostics;
 using System.Windows;

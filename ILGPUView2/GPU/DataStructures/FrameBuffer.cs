@@ -5,7 +5,7 @@ using static GPU.Kernels;
 using System.Drawing;
 using System;
 
-namespace Camera
+namespace ILGPUView2.GPU.DataStructures
 {
     public class GPUFrameBuffer : IDisposable
     {
@@ -30,7 +30,7 @@ namespace Camera
             depthData = new float[width * height];
         }
 
-        public FrameBuffer toDevice(GPU.Renderer gpu)
+        public FrameBuffer toDevice(Renderer gpu)
         {
             if (gpuColorData == null || gpuColorData.Extent != colorData.Length)
             {

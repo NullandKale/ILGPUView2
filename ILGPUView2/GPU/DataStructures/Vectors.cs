@@ -18,6 +18,71 @@ namespace GPU
             this.w = w;
         }
 
+        public static Vec4 operator +(Vec4 v1, Vec4 v2)
+        {
+            return new Vec4(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, v1.w + v2.w);
+        }
+
+        public static Vec4 operator -(Vec4 v1, Vec4 v2)
+        {
+            return new Vec4(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z, v1.w - v2.w);
+        }
+
+        public static Vec4 operator *(Vec4 v1, Vec4 v2)
+        {
+            return new Vec4(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z, v1.w * v2.w);
+        }
+
+        public static Vec4 operator /(Vec4 v1, Vec4 v2)
+        {
+            return new Vec4(v1.x / v2.x, v1.y / v2.y, v1.z / v2.z, v1.w / v2.w);
+        }
+
+        public static Vec4 operator /(float v, Vec4 v1)
+        {
+            return new Vec4(v / v1.x, v / v1.y, v / v1.z, v / v1.w);
+        }
+
+        public static Vec4 operator *(Vec4 v1, float v)
+        {
+            return new Vec4(v1.x * v, v1.y * v, v1.z * v, v1.w * v);
+        }
+
+        public static Vec4 operator *(float v, Vec4 v1)
+        {
+            return new Vec4(v1.x * v, v1.y * v, v1.z * v, v1.w * v);
+        }
+
+        public static Vec4 operator +(Vec4 v1, float v)
+        {
+            return new Vec4(v1.x + v, v1.y + v, v1.z + v, v1.w + v);
+        }
+
+        public static Vec4 operator +(float v, Vec4 v1)
+        {
+            return new Vec4(v1.x + v, v1.y + v, v1.z + v, v1.w + v);
+        }
+
+        public static Vec4 operator -(Vec4 v1, float v)
+        {
+            return new Vec4(v1.x - v, v1.y - v, v1.z - v, v1.w - v);
+        }
+
+        public static Vec4 operator -(float v, Vec4 v1)
+        {
+            return new Vec4(v - v1.x, v - v1.y, v - v1.z, v - v1.w);
+        }
+
+        public static Vec4 operator /(Vec4 v1, float v)
+        {
+            return v1 * (1.0f / v);
+        }
+
+        public static Vec4 Normalize(Vec4 v)
+        {
+            return v / XMath.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+        }
+
         public Vec3 xyz()
         {
             return new Vec3(x, y, z);
@@ -595,12 +660,10 @@ namespace GPU
             return new Vec3(v1.x * v, v1.y * v, v1.z * v);
         }
 
-
         public static Vec3 operator +(Vec3 v1, float v)
         {
             return new Vec3(v1.x + v, v1.y + v, v1.z + v);
         }
-
 
         public static Vec3 operator +(float v, Vec3 v1)
         {
@@ -609,27 +672,23 @@ namespace GPU
 
         public static Vec3 operator -(Vec3 v1, float v)
         {
-            return new Vec3(v1.x + v, v1.y + v, v1.z + v);
+            return new Vec3(v1.x - v, v1.y - v, v1.z - v);
         }
-
 
         public static Vec3 operator -(float v, Vec3 v1)
         {
-            return new Vec3(v1.x + v, v1.y + v, v1.z + v);
+            return new Vec3(v - v1.x, v - v1.y, v - v1.z);
         }
-
 
         public static Vec3 operator /(Vec3 v1, float v)
         {
             return v1 * (1.0f / v);
         }
 
-
         public static float dot(Vec3 v1, Vec3 v2)
         {
             return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
         }
-
 
         public static Vec3 cross(Vec3 v1, Vec3 v2)
         {
@@ -637,7 +696,6 @@ namespace GPU
                           -(v1.x * v2.z - v1.z * v2.x),
                             v1.x * v2.y - v1.y * v2.x);
         }
-
 
         public static Vec3 unitVector(Vec3 v)
         {

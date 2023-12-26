@@ -1,5 +1,4 @@
-﻿using Camera;
-using ExampleProject.Modes;
+﻿using ExampleProject.Modes;
 using GPU;
 using GPU.RT;
 using ILGPU;

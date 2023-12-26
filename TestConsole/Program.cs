@@ -20,8 +20,6 @@ namespace BiDirectionalStreamingTest
             var clientUdpReceiveAddress = "127.0.0.1:6001";
             var client = new BiDirectionalStreaming(serverAddress, isServer: false, null, clientUdpSendAddress, clientUdpReceiveAddress);
 
-            // The connect message is now handled internally in the BiDirectionalStreaming class
-
             // Wait for user input before closing
             Console.ReadKey();
         }

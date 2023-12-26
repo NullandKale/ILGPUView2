@@ -4,7 +4,6 @@ using UIElement;
 using System.Windows.Input;
 using ILGPUView2.GPU.DataStructures;
 using System;
-using Camera;
 using ILGPU.Algorithms.Random;
 using ILGPUView2.GPU.Filters;
 using ILGPU.Algorithms;

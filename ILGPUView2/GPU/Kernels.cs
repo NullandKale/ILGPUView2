@@ -1,7 +1,6 @@
 ﻿using ILGPU.Runtime;
 using ILGPU;
 using GPU.RT;
-using Camera;
 using ILGPUView2.GPU;
 using ILGPUView2.GPU.RT;
 using ILGPUView2.GPU.DataStructures;

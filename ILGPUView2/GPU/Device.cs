@@ -1,5 +1,4 @@
-﻿using Camera;
-using GPU.RT;
+﻿using GPU.RT;
 using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
