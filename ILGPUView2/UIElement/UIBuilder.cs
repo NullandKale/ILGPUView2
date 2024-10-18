@@ -108,6 +108,86 @@ namespace GPU
             return slider;
         }
 
+        public static void AddVec3Slider(Vec3 min, Vec3 max, Vec3 @default, Action<Vec3> callback)
+        {
+            // Create a StackPanel to hold the sliders and label
+            StackPanel panel = new StackPanel
+            {
+                Orientation = Orientation.Vertical
+            };
+
+            // Create a label to display the current Vec3 values
+            Label valueLabel = new Label
+            {
+                Content = $"Vec3: ({@default.x:0.00}, {@default.y:0.00}, {@default.z:0.00})"
+            };
+            panel.Children.Add(valueLabel);
+
+            // Variables to hold current values
+            float currentX = @default.x;
+            float currentY = @default.y;
+            float currentZ = @default.z;
+
+            // Function to update the value label and invoke the callback
+            void UpdateValue()
+            {
+                valueLabel.Content = $"Vec3: ({currentX:0.00}, {currentY:0.00}, {currentZ:0.00})";
+                callback(new Vec3(currentX, currentY, currentZ));
+            }
+
+            // X Slider
+            Slider xSlider = new Slider
+            {
+                Minimum = min.x,
+                Maximum = max.x,
+                Value = currentX,
+                Margin = new Thickness(0, 5, 0, 0)
+            };
+            xSlider.ValueChanged += (sender, e) =>
+            {
+                currentX = (float)e.NewValue;
+                UpdateValue();
+            };
+            panel.Children.Add(xSlider);
+
+            // Y Slider
+            Slider ySlider = new Slider
+            {
+                Minimum = min.y,
+                Maximum = max.y,
+                Value = currentY,
+                Margin = new Thickness(0, 5, 0, 0)
+            };
+            ySlider.ValueChanged += (sender, e) =>
+            {
+                currentY = (float)e.NewValue;
+                UpdateValue();
+            };
+            panel.Children.Add(ySlider);
+
+            // Z Slider
+            Slider zSlider = new Slider
+            {
+                Minimum = min.z,
+                Maximum = max.z,
+                Value = currentZ,
+                Margin = new Thickness(0, 5, 0, 0)
+            };
+            zSlider.ValueChanged += (sender, e) =>
+            {
+                currentZ = (float)e.NewValue;
+                UpdateValue();
+            };
+            panel.Children.Add(zSlider);
+
+            // Add the panel containing all elements to the UI
+            AddChild(panel);
+
+            // Invoke the callback with the default value
+            UpdateValue();
+        }
+
+
         public static void AddColorSliderWithPreview(Action<Vec3> callback)
         {
             // Create a Rectangle for color preview
