@@ -75,7 +75,12 @@ namespace GPU
             double u = (double)x / (double)output.width;
             double v = (double)y / (double)output.height;
 
-            output.SetColorAt(x, y, filter.Apply(tick, (float)u, (float)v, output, input));
+            RGBA32 color = filter.Apply(tick, (float)u, (float)v, output, input);
+
+            if(color.r != 0 || color.g != 0 || color.b != 0 || color.a != 0)
+            {
+                output.SetColorAt(x, y, color);
+            }
         }
 
         public static void MegaTextureMaskKernel<TFunc>(Index1D index, int tick, dImage output, dMegaTexture input, TFunc filter) where TFunc : unmanaged, IMegaTextureMask

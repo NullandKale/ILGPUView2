@@ -9,10 +9,11 @@ namespace GPU
 {
     public static class UIBuilder
     {
-        private static ScrollViewer instance;
-        private static StackPanel stackPanel;
+        private static Grid rootGrid;
+        private static StackPanel sidebarStackPanel;
+        private static Grid contentGrid; // This will hold the content view
         private static Action<string> onFPSUpdateCallback;
-        
+
         public static void SetFPSCallback(Action<string> onFPSUpdate)
         {
             onFPSUpdateCallback = onFPSUpdate;
@@ -20,35 +21,87 @@ namespace GPU
 
         public static void OnFPSUpdate(string FPS)
         {
-            if(onFPSUpdateCallback != null)
+            onFPSUpdateCallback?.Invoke(FPS);
+        }
+
+        // Change the parameter type to Grid
+        public static void SetUIStack(Grid uiGrid)
+        {
+            // Use the provided Grid as the root grid
+            rootGrid = uiGrid;
+
+            // Define two columns: one for the sidebar and one for the content view
+            rootGrid.ColumnDefinitions.Clear();
+            rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(250) }); // Sidebar width
+            rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Content area (starts hidden)
+
+            // Initialize the sidebar StackPanel
+            sidebarStackPanel = new StackPanel();
+            ScrollViewer sidebarScrollViewer = new ScrollViewer
             {
-                onFPSUpdateCallback(FPS);
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Content = sidebarStackPanel
+            };
+            Grid.SetColumn(sidebarScrollViewer, 0);
+            rootGrid.Children.Add(sidebarScrollViewer);
+
+            // Initialize the content grid, hidden at the start
+            contentGrid = new Grid();
+            Grid.SetColumn(contentGrid, 1);
+            rootGrid.Children.Add(contentGrid);
+
+            // Start with the sidebar filling the entire grid (because content is initially empty)
+            CollapseContentArea();
+        }
+
+        // Internal method to set the content view
+        public static void SetContentView(System.Windows.UIElement contentView)
+        {
+            if (contentView == null)
+            {
+                // If the content is null, collapse the content area and expand the sidebar
+                CollapseContentArea();
+            }
+            else
+            {
+                // Clear any existing content in the content area
+                contentGrid.Children.Clear();
+
+                // Add the new content view
+                contentGrid.Children.Add(contentView);
+
+                // Adjust the grid layout to show the content
+                ExpandContentArea();
             }
         }
 
-        public static void SetUIStack(StackPanel stackPanel)
+        private static void CollapseContentArea()
         {
-            instance = new ScrollViewer
-            {
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
-            };
-            UIBuilder.stackPanel = stackPanel;
-            instance.Content = UIBuilder.stackPanel;
+            // Adjust the grid so that the sidebar fills the entire grid
+            rootGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+            rootGrid.ColumnDefinitions[1].Width = new GridLength(0);
         }
 
-        private static void AddChild(System.Windows.UIElement o)
+        private static void ExpandContentArea()
         {
-            stackPanel.Children.Add(o);
+            // Adjust the grid back to having the sidebar and content
+            rootGrid.ColumnDefinitions[0].Width = new GridLength(250); // Sidebar width
+            rootGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star); // Content area
         }
 
-        public static void RemoveControl(System.Windows.UIElement o)
+        private static void AddChild(System.Windows.UIElement element)
         {
-            stackPanel.Children.Remove(o);
+            sidebarStackPanel.Children.Add(element);
         }
+
+        public static void RemoveControl(System.Windows.UIElement element)
+        {
+            sidebarStackPanel.Children.Remove(element);
+        }
+
         public static void Clear()
         {
-            stackPanel.Children.Clear();
+            sidebarStackPanel.Children.Clear();
         }
 
         public static Label AddLabel(string text)

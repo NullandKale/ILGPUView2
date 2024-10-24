@@ -5,6 +5,65 @@ using static GPU.Kernels;
 
 namespace ILGPUView2.GPU.Filters
 {
+    public struct ScaleQuadrant : IImageMask
+    {
+        private int targetQuadrant;
+
+        public ScaleQuadrant(int quadrant)
+        {
+            targetQuadrant = (int)quadrant;
+        }
+
+        // u, v go from 0 - 1 and cover the entire range of the input.GetColorAt()
+        public RGBA32 Apply(int tick, float u, float v, dImage output, dImage input)
+        {
+            // Calculate the quadrant offset based on the selected quadrant
+            float offsetU = 0;
+            float offsetV = 0;
+
+            switch (targetQuadrant)
+            {
+                case 0:
+                    offsetU = 0;
+                    offsetV = 0;
+                    break;
+                case 1:
+                    offsetU = 0.5f;
+                    offsetV = 0;
+                    break;
+                case 2:
+                    offsetU = 0;
+                    offsetV = 0.5f;
+                    break;
+                case 3:
+                    offsetU = 0.5f;
+                    offsetV = 0.5f;
+                    break;
+            }
+
+            // Check if the current pixel is within the target quadrant
+            if (u >= offsetU && u < offsetU + 0.5f && v >= offsetV && v < offsetV + 0.5f)
+            {
+                // Map u, v within the quadrant to 0-1 range
+                float localU = (u - offsetU) * 2.0f;
+                float localV = (v - offsetV) * 2.0f;
+
+                // Get the corresponding color from the input image and apply it to the output
+
+                RGBA32 color = input.GetColorAt(localU, localV);
+                if (targetQuadrant == 2 || targetQuadrant == 3)
+                {
+                    color = new RGBA32(color.b, color.g, color.r, color.a);
+                }
+                return color;
+            }
+            else
+            {
+                return new RGBA32(0, 0, 0, 0);
+            }
+        }
+    }
+
     public struct Scale : IImageMask
     {
         public RGBA32 Apply(int tick, float u, float v, dImage output, dImage input)

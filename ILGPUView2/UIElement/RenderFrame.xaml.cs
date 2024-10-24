@@ -25,6 +25,20 @@ namespace UIElement
             SizeChanged += RenderFrame_SizeChanged;
         }
 
+        public RenderFrame(int width, int height)
+        {
+            InitializeComponent();
+
+            this.width = width;
+            this.height = height;
+
+            Width = width;
+            Height = height;
+
+            UpdateResolution();
+        }
+
+
         private void RenderFrame_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             width = (int)e.NewSize.Width;
