@@ -21,7 +21,7 @@ namespace ExampleProject
 
             renderManager = new RenderManager();
             UIBuilder.SetFPSCallback((string fps) => { label.Content= fps; });
-            UIBuilder.SetUIStack(rendermode_ui);
+            UIBuilder.SetUIGrid(rendermode_ui);
 
             AddRenderModes();
         }

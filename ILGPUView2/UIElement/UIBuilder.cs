@@ -24,8 +24,7 @@ namespace GPU
             onFPSUpdateCallback?.Invoke(FPS);
         }
 
-        // Change the parameter type to Grid
-        public static void SetUIStack(Grid uiGrid)
+        public static void SetUIGrid(Grid uiGrid)
         {
             // Use the provided Grid as the root grid
             rootGrid = uiGrid;
@@ -312,6 +311,26 @@ namespace GPU
         {
             ComboBox comboBox = new ComboBox();
             comboBox.ItemsSource = items;
+            comboBox.SelectedIndex = 0;
+
+            comboBox.SelectionChanged += (sender, args) =>
+            {
+                if (comboBox.SelectedIndex != -1)
+                {
+                    onItemSelected(comboBox.SelectedIndex);
+                }
+            };
+
+            AddChild(comboBox);
+
+            return comboBox;
+        }
+
+        public static ComboBox AddDropdown(string[] items, int defaultItem, Action<int> onItemSelected)
+        {
+            ComboBox comboBox = new ComboBox();
+            comboBox.ItemsSource = items;
+            comboBox.SelectedIndex = defaultItem;
 
             comboBox.SelectionChanged += (sender, args) =>
             {

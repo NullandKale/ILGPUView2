@@ -77,7 +77,7 @@ namespace ExampleProject.Modes
 
         public RGBA32 Apply(int tick, float x, float y, FrameBuffer output, ArrayView1D<SplatData, Stride1D.Dense> splats)
         {
-
+            return new RGBA32();
         }
     }
 }

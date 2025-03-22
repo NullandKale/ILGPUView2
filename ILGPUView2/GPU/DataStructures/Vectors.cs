@@ -311,6 +311,12 @@ namespace GPU
             this.y = y;
         }
 
+        public Vec2(double x, double y)
+        {
+            this.x = (float)x;
+            this.y = (float)y;
+        }
+
         public static Vec2 operator +(Vec2 v1, Vec2 v2)
         {
             return new Vec2(v1.x + v2.x, v1.y + v2.y);

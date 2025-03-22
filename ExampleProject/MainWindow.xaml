@@ -10,8 +10,8 @@
             <Label x:Name="title" Content="ILGPU View 2.0 Example"/>
             <Label x:Name="label" Content="FPS Counter"/>
             <ComboBox x:Name="mode" />
-            <StackPanel Margin="10" x:Name="rendermode_ui">
-            </StackPanel>
+            <Grid Margin="10" x:Name="rendermode_ui">
+            </Grid>
         </StackPanel>
     </Grid>
 </Window>
