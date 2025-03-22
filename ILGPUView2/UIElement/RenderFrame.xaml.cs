@@ -71,6 +71,7 @@ namespace UIElement
 
         public void update(ref int[] data)
         {
+            if(data.Length != width * height) return;
             wBitmap.Lock();
             IntPtr pBackBuffer = wBitmap.BackBuffer;
             Marshal.Copy(data, 0, pBackBuffer, data.Length);

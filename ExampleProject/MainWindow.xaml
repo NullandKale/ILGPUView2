@@ -12,6 +12,9 @@
             <ComboBox x:Name="mode" />
             <Grid Margin="10" x:Name="rendermode_ui">
             </Grid>
+            <ContentControl x:Name="content">
+                
+            </ContentControl>
         </StackPanel>
     </Grid>
 </Window>

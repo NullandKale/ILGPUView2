@@ -26,7 +26,7 @@ namespace ExampleProject
             AddRenderModes();
         }
 
-        public void AddRenderModes(int default_mode = 13)
+        public void AddRenderModes(int default_mode = 14)
         {
             renderManager.AddRenderCallback(0, new Modes.Debug());
             renderManager.AddRenderCallback(1, new DrawCircles());
@@ -42,6 +42,7 @@ namespace ExampleProject
             renderManager.AddRenderCallback(11, new MeshRenderer());
             renderManager.AddRenderCallback(12, new SDF());
             renderManager.AddRenderCallback(13, new SplatMode());
+            renderManager.AddRenderCallback(14, new VideoPlaybackTestMode());
 
             mode.ItemsSource = new string[] 
             {
@@ -59,6 +60,7 @@ namespace ExampleProject
                 "Mesh Renderer",
                 "SDF Renderer",
                 "Splat Renderer",
+                "Video Test Mode"
             };
             
 

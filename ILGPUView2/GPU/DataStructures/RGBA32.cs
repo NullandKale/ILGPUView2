@@ -134,6 +134,18 @@ namespace GPU
             return !(left == right);
         }
 
+        public static unsafe implicit operator int(RGBA32 v)
+        {
+            int result;
+            int* resultPtr = &result;
+            byte* bytePtr = (byte*)resultPtr;
+            bytePtr[0] = v.r;
+            bytePtr[1] = v.g;
+            bytePtr[2] = v.b;
+            bytePtr[3] = v.a;
+            return result;
+        }
+
         public override bool Equals(object obj)
         {
             if (obj is RGBA32)

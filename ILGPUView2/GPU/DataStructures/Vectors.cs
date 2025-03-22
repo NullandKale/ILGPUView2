@@ -317,6 +317,7 @@ namespace GPU
             this.y = (float)y;
         }
 
+
         public static Vec2 operator +(Vec2 v1, Vec2 v2)
         {
             return new Vec2(v1.x + v2.x, v1.y + v2.y);
@@ -440,7 +441,7 @@ namespace GPU
     [StructLayout(LayoutKind.Sequential, Size = 12, Pack = 16)]
     public struct Vec3
     {
-        public static readonly Vec3 Ones = new Vec3(1,1,1);
+        public static readonly Vec3 Ones = new Vec3(1, 1, 1);
         public float x;
         public float y;
         public float z;
@@ -966,6 +967,497 @@ namespace GPU
         }
     }
 
+    [StructLayout(LayoutKind.Sequential, Size = 24, Pack = 16)]
+    public struct DVec3
+    {
+        public static readonly DVec3 Ones = new DVec3(1, 1, 1);
+        public double x;
+        public double y;
+        public double z;
+
+        // Constructors
+        public DVec3(DVec3 toCopy)
+        {
+            this.x = toCopy.x;
+            this.y = toCopy.y;
+            this.z = toCopy.z;
+        }
+
+        public DVec3(double v)
+        {
+            this.x = v;
+            this.y = v;
+            this.z = v;
+        }
+
+        public DVec3(double x, double y, double z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        // ToString override for debugging.
+        public override string ToString()
+        {
+            return "{" + string.Format("{0:0.00}", x) + ", " + string.Format("{0:0.00}", y) + ", " + string.Format("{0:0.00}", z) + "}";
+        }
+
+        // Unary negation.
+        public static DVec3 operator -(DVec3 vec)
+        {
+            return new DVec3(-vec.x, -vec.y, -vec.z);
+        }
+
+        // Length (magnitude) of the vector.
+        public double Length()
+        {
+            return Math.Sqrt(x * x + y * y + z * z);
+        }
+
+        // Average of the components.
+        public double Average()
+        {
+            return (x + y + z) / 3.0;
+        }
+
+        // Squared length.
+        public double LengthSquared()
+        {
+            return x * x + y * y + z * z;
+        }
+
+        // Get a component by index.
+        public double GetAt(int a)
+        {
+            switch (a)
+            {
+                case 0: return x;
+                case 1: return y;
+                case 2: return z;
+                default: return 0;
+            }
+        }
+
+        // Indexer for element access.
+        public double this[int i]
+        {
+            get
+            {
+                if (i == 0) return x;
+                if (i == 1) return y;
+                if (i == 2) return z;
+                throw new IndexOutOfRangeException();
+            }
+            set
+            {
+                if (i == 0) x = value;
+                else if (i == 1) y = value;
+                else if (i == 2) z = value;
+                else throw new IndexOutOfRangeException();
+            }
+        }
+
+        // Convert from HSB to RGB.
+        public static DVec3 HsbToRgb(DVec3 hsb)
+        {
+            double chroma = hsb.z * hsb.y;
+            double hue2 = hsb.x * 6.0;
+            double X = chroma * (1.0 - Math.Abs(hue2 % 2.0 - 1.0));
+            double r, g, b;
+            if (hue2 < 1.0)
+            {
+                r = chroma;
+                g = X;
+                b = 0.0;
+            }
+            else if (hue2 < 2.0)
+            {
+                r = X;
+                g = chroma;
+                b = 0.0;
+            }
+            else if (hue2 < 3.0)
+            {
+                r = 0.0;
+                g = chroma;
+                b = X;
+            }
+            else if (hue2 < 4.0)
+            {
+                r = 0.0;
+                g = X;
+                b = chroma;
+            }
+            else if (hue2 < 5.0)
+            {
+                r = X;
+                g = 0.0;
+                b = chroma;
+            }
+            else
+            {
+                r = chroma;
+                g = 0.0;
+                b = X;
+            }
+            double m = hsb.z - chroma;
+            return new DVec3(r + m, g + m, b + m);
+        }
+
+        // Linear interpolation.
+        public static DVec3 Lerp(DVec3 a, DVec3 b, double t)
+        {
+            return (1.0 - t) * a + t * b;
+        }
+
+        // Setters for individual components.
+        public static DVec3 SetX(DVec3 v, double x)
+        {
+            return new DVec3(x, v.y, v.z);
+        }
+
+        public static DVec3 SetY(DVec3 v, double y)
+        {
+            return new DVec3(v.x, y, v.z);
+        }
+
+        public static DVec3 SetZ(DVec3 v, double z)
+        {
+            return new DVec3(v.x, v.y, z);
+        }
+
+        // Distance between two vectors.
+        public static double Dist(DVec3 v1, DVec3 v2)
+        {
+            double dx = v1.x - v2.x;
+            double dy = v1.y - v2.y;
+            double dz = v1.z - v2.z;
+            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        // Component-wise operators.
+        public static DVec3 operator +(DVec3 v1, DVec3 v2)
+        {
+            return new DVec3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+        }
+
+        public static DVec3 operator -(DVec3 v1, DVec3 v2)
+        {
+            return new DVec3(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+        }
+
+        public static DVec3 operator *(DVec3 v1, DVec3 v2)
+        {
+            return new DVec3(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z);
+        }
+
+        public static DVec3 operator /(DVec3 v1, DVec3 v2)
+        {
+            return new DVec3(v1.x / v2.x, v1.y / v2.y, v1.z / v2.z);
+        }
+
+        public static DVec3 operator /(double v, DVec3 v1)
+        {
+            return new DVec3(v / v1.x, v / v1.y, v / v1.z);
+        }
+
+        // Scalar operators.
+        public static DVec3 operator *(DVec3 v1, double v)
+        {
+            return new DVec3(v1.x * v, v1.y * v, v1.z * v);
+        }
+
+        public static DVec3 operator *(double v, DVec3 v1)
+        {
+            return new DVec3(v1.x * v, v1.y * v, v1.z * v);
+        }
+
+        public static DVec3 operator +(DVec3 v1, double v)
+        {
+            return new DVec3(v1.x + v, v1.y + v, v1.z + v);
+        }
+
+        public static DVec3 operator +(double v, DVec3 v1)
+        {
+            return new DVec3(v1.x + v, v1.y + v, v1.z + v);
+        }
+
+        public static DVec3 operator -(DVec3 v1, double v)
+        {
+            return new DVec3(v1.x - v, v1.y - v, v1.z - v);
+        }
+
+        public static DVec3 operator -(double v, DVec3 v1)
+        {
+            return new DVec3(v - v1.x, v - v1.y, v - v1.z);
+        }
+
+        public static DVec3 operator /(DVec3 v1, double v)
+        {
+            return v1 * (1.0 / v);
+        }
+
+        // Dot product.
+        public static double Dot(DVec3 v1, DVec3 v2)
+        {
+            return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+        }
+
+        // Cross product.
+        public static DVec3 Cross(DVec3 v1, DVec3 v2)
+        {
+            return new DVec3(
+                v1.y * v2.z - v1.z * v2.y,
+                -(v1.x * v2.z - v1.z * v2.x),
+                v1.x * v2.y - v1.y * v2.x
+            );
+        }
+
+        // Returns a unit vector in the same direction.
+        public static DVec3 UnitVector(DVec3 v)
+        {
+            double len = Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+            return v / len;
+        }
+
+        public DVec3 Normalize()
+        {
+            return UnitVector(this);
+        }
+
+        // Reflection.
+        public static DVec3 Reflect(DVec3 incomming, DVec3 normal)
+        {
+            return incomming - normal * 2.0 * Dot(incomming, normal);
+        }
+
+        // Refraction.
+        public static DVec3 Refract(DVec3 v, DVec3 n, double niOverNt)
+        {
+            DVec3 uv = UnitVector(v);
+            double dt = Dot(uv, n);
+            double discriminant = 1.0 - niOverNt * niOverNt * (1.0 - dt * dt);
+            if (discriminant > 0)
+            {
+                return niOverNt * (uv - (n * dt)) - n * Math.Sqrt(discriminant);
+            }
+            return v;
+        }
+
+        // Fresnel reflectance using Schlick's approximation.
+        public static double NormalReflectance(DVec3 normal, DVec3 incomming, double iorFrom, double iorTo)
+        {
+            double iorRatio = iorFrom / iorTo;
+            double cosThetaI = -Dot(normal, incomming);
+            double sinThetaTSquared = iorRatio * iorRatio * (1.0 - cosThetaI * cosThetaI);
+            if (sinThetaTSquared > 1.0)
+            {
+                return 1.0;
+            }
+            double cosThetaT = Math.Sqrt(1.0 - sinThetaTSquared);
+            double rPerpendicular = (iorFrom * cosThetaI - iorTo * cosThetaT) / (iorFrom * cosThetaI + iorTo * cosThetaT);
+            double rParallel = (iorFrom * cosThetaI - iorTo * cosThetaT) / (iorFrom * cosThetaI + iorTo * cosThetaT);
+            return (rPerpendicular * rPerpendicular + rParallel * rParallel) / 2.0;
+        }
+
+        // ACES tone mapping approximation.
+        public static DVec3 AcesApprox(DVec3 v)
+        {
+            v *= 0.6;
+            double a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
+            DVec3 working = (v * (a * v + b)) / (v * (c * v + d) + e);
+            return new DVec3(
+                Math.Clamp(working.x, 0.0, 1.0),
+                Math.Clamp(working.y, 0.0, 1.0),
+                Math.Clamp(working.z, 0.0, 1.0)
+            );
+        }
+
+        // Reinhard tone mapping.
+        public static DVec3 Reinhard(DVec3 v)
+        {
+            return v / (1.0 + v);
+        }
+
+        // Equality check.
+        public static bool Equals(DVec3 a, DVec3 b)
+        {
+            return a.x == b.x && a.y == b.y && a.z == b.z;
+        }
+
+        // Comparison based on squared length.
+        public static int CompareTo(DVec3 a, DVec3 b)
+        {
+            return a.LengthSquared().CompareTo(b.LengthSquared());
+        }
+
+        // Absolute value (component-wise).
+        public static DVec3 Abs(DVec3 vec3)
+        {
+            return new DVec3(Math.Abs(vec3.x), Math.Abs(vec3.y), Math.Abs(vec3.z));
+        }
+
+        // Ceiling.
+        public static DVec3 Ceil(DVec3 vec3)
+        {
+            return new DVec3(Math.Ceiling(vec3.x), Math.Ceiling(vec3.y), Math.Ceiling(vec3.z));
+        }
+
+        // Modulus (component-wise mod using floor).
+        public static DVec3 Mod(DVec3 vec3, double v)
+        {
+            return vec3 - v * Floor(vec3 / v);
+        }
+
+        // Clamp each component between v1 and v2.
+        public static DVec3 Clamp(DVec3 vec3, double v1, double v2)
+        {
+            return new DVec3(
+                Math.Clamp(vec3.x, v1, v2),
+                Math.Clamp(vec3.y, v1, v2),
+                Math.Clamp(vec3.z, v1, v2)
+            );
+        }
+
+        // Floor.
+        public static DVec3 Floor(DVec3 vec3)
+        {
+            return new DVec3(Math.Floor(vec3.x), Math.Floor(vec3.y), Math.Floor(vec3.z));
+        }
+
+        // Conditional vector selection.
+        public static DVec3 VecIf(DVec3 val, DVec3 cond, DVec3 newVal)
+        {
+            DVec3 toReturn = val;
+            if ((int)val.x == (int)cond.x) { toReturn.x = newVal.x; }
+            if ((int)val.y == (int)cond.y) { toReturn.y = newVal.y; }
+            if ((int)val.z == (int)cond.z) { toReturn.z = newVal.z; }
+            return toReturn;
+        }
+
+        // Clamp using vector bounds.
+        public static DVec3 Clamp(DVec3 value, DVec3 min, DVec3 max)
+        {
+            double x = Math.Clamp(value.x, min.x, max.x);
+            double y = Math.Clamp(value.y, min.y, max.y);
+            double z = Math.Clamp(value.z, min.z, max.z);
+            return new DVec3(x, y, z);
+        }
+
+        // Power (component-wise).
+        public static DVec3 Pow(DVec3 color, double power)
+        {
+            return new DVec3(
+                Math.Pow(color.x, power),
+                Math.Pow(color.y, power),
+                Math.Pow(color.z, power)
+            );
+        }
+
+        // Logarithm (component-wise) with given base.
+        public static DVec3 Log(DVec3 color, double base_value)
+        {
+            return new DVec3(
+                Math.Log(color.x, base_value),
+                Math.Log(color.y, base_value),
+                Math.Log(color.z, base_value)
+            );
+        }
+
+        // Square root (component-wise).
+        public static DVec3 Sqrt(DVec3 vec3)
+        {
+            return new DVec3(
+                Math.Sqrt(vec3.x),
+                Math.Sqrt(vec3.y),
+                Math.Sqrt(vec3.z)
+            );
+        }
+
+        // Exponential (component-wise).
+        public static DVec3 Exp(DVec3 vec3)
+        {
+            return new DVec3(
+                Math.Exp(vec3.x),
+                Math.Exp(vec3.y),
+                Math.Exp(vec3.z)
+            );
+        }
+
+        // Component-wise minimum.
+        public static DVec3 Min(DVec3 a, DVec3 b)
+        {
+            return new DVec3(
+                Math.Min(a.x, b.x),
+                Math.Min(a.y, b.y),
+                Math.Min(a.z, b.z)
+            );
+        }
+
+        // Component-wise maximum.
+        public static DVec3 Max(DVec3 a, DVec3 b)
+        {
+            return new DVec3(
+                Math.Max(a.x, b.x),
+                Math.Max(a.y, b.y),
+                Math.Max(a.z, b.z)
+            );
+        }
+
+        // Minimum component (replicated into all components).
+        public static DVec3 Min(DVec3 a)
+        {
+            return new DVec3(Math.Min(a.x, Math.Min(a.y, a.z)));
+        }
+
+        // Maximum component (replicated into all components).
+        public static DVec3 Max(DVec3 a)
+        {
+            return new DVec3(Math.Max(a.x, Math.Max(a.y, a.z)));
+        }
+
+        // Alias for Abs.
+        public static DVec3 Abs2(DVec3 v)
+        {
+            return Abs(v);
+        }
+
+        // Alias for Ceiling.
+        public static DVec3 Ceiling(DVec3 v)
+        {
+            return new DVec3(Math.Ceiling(v.x), Math.Ceiling(v.y), Math.Ceiling(v.z));
+        }
+
+        // Another clamp function.
+        public static DVec3 Clamp2(DVec3 v, double v1, double v2)
+        {
+            return new DVec3(
+                Math.Clamp(v.x, v1, v2),
+                Math.Clamp(v.y, v1, v2),
+                Math.Clamp(v.z, v1, v2)
+            );
+        }
+
+        // Sum of mod components.
+        public static double ModSum(DVec3 vec3, double v)
+        {
+            return vec3.x % v + vec3.y % v + vec3.z % v;
+        }
+
+        // Check if the vector is near zero.
+        public bool NearZero()
+        {
+            const double epsilon = 1e-7;
+            return Math.Abs(x) < epsilon && Math.Abs(y) < epsilon && Math.Abs(z) < epsilon;
+        }
+
+        // Conversion: Create a Vec3 (float‑based) from this DVec3.
+        public Vec3 ToVec3()
+        {
+            return new Vec3(x, y, z);
+        }
+    }
     public struct Vec3i
     {
         public int x;
