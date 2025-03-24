@@ -74,5 +74,80 @@ namespace GPU
             // Return the jittered u and v values as a Vec2
             return new Vec2(jitteredU, jitteredV);
         }
+
+        /// <summary>
+        /// Kernel to scale an input image (in RGBA) to a target resolution and convert to an array of RGB floats.
+        /// </summary>
+        public static void ImageToRGBFloats(
+            Index1D index,
+            dImage input,
+            ArrayView<float> output,
+            int outWidth,
+            int outHeight)
+        {
+            int totalPixels = outWidth * outHeight;
+            if (index >= totalPixels)
+                return;
+
+            // Compute output pixel coordinates
+            int x = index % outWidth;
+            int y = index / outWidth;
+
+            // Compute normalized coordinates (center of pixel)
+            float u = (x + 0.5f) / outWidth;
+            float v = (y + 0.5f) / outHeight;
+
+            // Map to input image coordinates
+            float inX = u * input.width;
+            float inY = v * input.height;
+
+            // Use nearest-neighbor sampling
+            int srcX = (int)inX;
+            int srcY = (int)inY;
+            if (srcX >= input.width)
+                srcX = input.width - 1;
+            if (srcY >= input.height)
+                srcY = input.height - 1;
+
+            // Get the color from the input image (assumes dImage.GetColorAt is available on GPU)
+            RGBA32 color = input.GetColorAt(srcX, srcY);
+
+            // Write normalized RGB values into the output float array
+            int outIndex = index * 3;
+            output[outIndex + 0] = color.r / 255.0f;
+            output[outIndex + 1] = color.g / 255.0f;
+            output[outIndex + 2] = color.b / 255.0f;
+        }
+
+        /// <summary>
+        /// Converts a single-channel depth float value to a BGRA pixel.
+        /// For each pixel, applies: scaled = depth * alpha + beta, clamps to [0,255],
+        /// then writes the same grayscale value into B, G, and R, with A = 255.
+        /// </summary>
+        public static void DepthFloatsToBGRAImage(
+            Index1D index,
+            ArrayView<float> depthInput,
+            dImage output,
+            float alpha,
+            float beta)
+        {
+            int totalPixels = output.width * output.height;
+            if (index >= totalPixels)
+                return;
+
+            float depthVal = depthInput[index];
+            float scaled = depthVal * alpha + beta;
+
+            // Clamp the value between 0 and 255
+            scaled = scaled < 0f ? 0f : (scaled > 255f ? 255f : scaled);
+            byte gray = (byte)scaled;
+
+            // Create a BGRA pixel where B, G, and R are the same grayscale value and A is 255.
+            RGBA32 color = new RGBA32(gray, gray, gray, 255);
+
+            int x = index % output.width;
+            int y = index / output.width;
+            output.SetColorAt(x, y, color);
+        }
     }
 }

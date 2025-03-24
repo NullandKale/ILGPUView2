@@ -29,6 +29,9 @@ namespace GPU
         protected Action<Index1D, dImage, ArrayView1D<byte, Stride1D.Dense>> rgbaKernel;
         protected Action<Index1D, dImage, FilterDepth> filterDepth;
 
+        public Action<Index1D, dImage, ArrayView<float>, int, int> imageToRGBFloatsKernel;
+        public Action<Index1D, ArrayView<float>, dImage, float, float> depthFloatsToBGRAImageKernel;
+
         public int ticks = 0;
 
         protected volatile bool isRunning;
@@ -59,6 +62,8 @@ namespace GPU
             rgbKernel = device.LoadAutoGroupedStreamKernel<Index1D, ArrayView1D<byte, Stride1D.Dense>, dImage>(ImageToRGB);
             rgbaKernel = device.LoadAutoGroupedStreamKernel<Index1D, dImage, ArrayView1D<byte, Stride1D.Dense>>(RGBToImage);
             filterDepth = device.LoadAutoGroupedStreamKernel<Index1D, dImage, FilterDepth>(FilteredDepthKernel);
+            imageToRGBFloatsKernel = device.LoadAutoGroupedStreamKernel<Index1D, dImage, ArrayView<float>, int, int>(Kernels.ImageToRGBFloats);
+            depthFloatsToBGRAImageKernel = device.LoadAutoGroupedStreamKernel<Index1D, ArrayView<float>, dImage, float, float>(Kernels.DepthFloatsToBGRAImage);
 
             renderFrame.onResolutionChanged = (width, height) =>
             {

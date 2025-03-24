@@ -35,6 +35,7 @@ namespace UIElement
             if (callback != null && loaded)
             {
                 callback.OnStart(gpu);
+                UIBuilder.Clear();
                 callback.CreateUI();
 
                 gpu.Start(callback.OnRender, callback.OnLateRender);

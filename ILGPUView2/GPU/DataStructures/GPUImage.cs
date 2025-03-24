@@ -238,10 +238,19 @@ namespace GPU
 
         public RGBA32 GetColorAt(float x, float y)
         {
-            int x_idx = (int)(x * width);
-            int y_idx = (int)(y * height);
+            float clammpedX = XMath.Clamp(x, 0, 1);
+            float clammpedY = XMath.Clamp(y, 0, 1);
+            float x_idx = XMath.Floor(clammpedX * (float)width);
+            float y_idx = XMath.Floor(clammpedY * (float)height);
 
-            return GetColorAt(x_idx, y_idx);
+            int index = (int)(y_idx * (float)width + x_idx);
+
+            if (index < 0 || index >= data.Length)
+            {
+                return new RGBA32(1, 0, 1);
+            }
+
+            return new RGBA32(data[index]);
         }
 
         public Vec3 GetPixel(float x, float y)
